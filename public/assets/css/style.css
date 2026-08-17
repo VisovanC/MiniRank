@@ -129,6 +129,26 @@ form.inline {
     margin-bottom: 1rem;
 }
 
+.filter {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.5rem;
+}
+
+.filter select,
+.filter input[type="number"] {
+    padding: 0.5rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 1rem;
+}
+
+.filter input[type="number"] {
+    width: 6rem;
+}
+
 .projects {
     display: flex;
     align-items: center;
@@ -262,19 +282,23 @@ a.kw-link:hover {
     }
 
     .card,
-    .search {
+    .search,
+    .filter {
         flex-direction: column;
     }
 
     .card input[type="text"],
     .card input[type="password"],
-    .search input[type="text"] {
+    .search input[type="text"],
+    .filter input[type="number"] {
         width: 100%;
     }
 
     .card button,
     .search button,
-    .search .btn {
+    .search .btn,
+    .filter button,
+    .filter .btn {
         width: 100%;
     }
 

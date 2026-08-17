@@ -27,6 +27,7 @@ final class KeywordListController
         $edit = null;
         $phrase = '';
         $search = trim((string) ($_GET['search'] ?? ''));
+        $filters = $this->readFilters();
 
         if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             $action = (string) ($_POST['action'] ?? '');
@@ -72,7 +73,23 @@ final class KeywordListController
             }
         }
 
-        $this->render($project, $error, $showProjectForm, $edit, $draft, $search);
+        $this->render($project, $error, $showProjectForm, $edit, $draft, $search, $filters);
+    }
+
+    private function readFilters(): array
+    {
+        $trend = (string) ($_GET['trend'] ?? '');
+        if (!in_array($trend, ['improved', 'declined', 'stable'], true)) {
+            $trend = '';
+        }
+        $from = filter_input(INPUT_GET, 'pos_from', FILTER_VALIDATE_INT);
+        $to = filter_input(INPUT_GET, 'pos_to', FILTER_VALIDATE_INT);
+        $posFrom = ($from !== null && $from !== false) ? max(1, min(100, $from)) : null;
+        $posTo = ($to !== null && $to !== false) ? max(1, min(100, $to)) : null;
+        if ($posFrom !== null && $posTo !== null && $posFrom > $posTo) {
+            [$posFrom, $posTo] = [$posTo, $posFrom];
+        }
+        return ['trend' => $trend, 'pos_from' => $posFrom, 'pos_to' => $posTo];
     }
 
     private function resolveProject(): array
@@ -172,11 +189,24 @@ final class KeywordListController
         bool $showProjectForm,
         ?array $edit,
         string $draft,
-        string $search
+        string $search,
+        array $filters
     ): void {
         $projectId = (int) $project['id'];
         $projects = project_list($this->pdo);
-        $rows = keyword_rows_with_metrics($this->pdo, $projectId, $search);
+        $allRows = keyword_rows_with_metrics($this->pdo, $projectId, $search);
+        $rows = filter_rows($allRows, $filters['trend'], $filters['pos_from'], $filters['pos_to']);
+        $filtersActive = $filters['trend'] !== '' || $filters['pos_from'] !== null || $filters['pos_to'] !== null;
+        $filterQuery = '';
+        if ($filters['trend'] !== '') {
+            $filterQuery .= '&amp;trend=' . rawurlencode($filters['trend']);
+        }
+        if ($filters['pos_from'] !== null) {
+            $filterQuery .= '&amp;pos_from=' . (int) $filters['pos_from'];
+        }
+        if ($filters['pos_to'] !== null) {
+            $filterQuery .= '&amp;pos_to=' . (int) $filters['pos_to'];
+        }
         $lastDate = position_last_date($this->pdo, $projectId);
         ?>
         <!DOCTYPE html>
@@ -250,12 +280,45 @@ final class KeywordListController
 
             <form method="get" action="index.php" class="search">
                 <input type="hidden" name="project" value="<?= $projectId ?>">
+                <?php if ($filters['trend'] !== ''): ?>
+                    <input type="hidden" name="trend" value="<?= e($filters['trend']) ?>">
+                <?php endif; ?>
+                <?php if ($filters['pos_from'] !== null): ?>
+                    <input type="hidden" name="pos_from" value="<?= (int) $filters['pos_from'] ?>">
+                <?php endif; ?>
+                <?php if ($filters['pos_to'] !== null): ?>
+                    <input type="hidden" name="pos_to" value="<?= (int) $filters['pos_to'] ?>">
+                <?php endif; ?>
                 <input type="text" name="search" value="<?= e($search) ?>" placeholder="Search keywords…">
                 <button type="submit" class="btn">Search</button>
                 <?php if ($search !== ''): ?>
-                    <a class="btn" href="index.php?project=<?= $projectId ?>">Clear</a>
+                    <a class="btn" href="index.php?project=<?= $projectId ?><?= $filterQuery ?>">Clear</a>
                 <?php endif; ?>
             </form>
+
+            <form method="get" action="index.php" class="filter">
+                <input type="hidden" name="project" value="<?= $projectId ?>">
+                <?php if ($search !== ''): ?>
+                    <input type="hidden" name="search" value="<?= e($search) ?>">
+                <?php endif; ?>
+                <select name="trend" aria-label="Movement">
+                    <option value="">Any movement</option>
+                    <option value="improved"<?= $filters['trend'] === 'improved' ? ' selected' : '' ?>>▲ Improved</option>
+                    <option value="declined"<?= $filters['trend'] === 'declined' ? ' selected' : '' ?>>▼ Declined</option>
+                    <option value="stable"<?= $filters['trend'] === 'stable' ? ' selected' : '' ?>>─ Stable</option>
+                </select>
+                <input type="number" name="pos_from" min="1" max="100" placeholder="Rank from" value="<?= $filters['pos_from'] !== null ? (int) $filters['pos_from'] : '' ?>">
+                <span class="muted">–</span>
+                <input type="number" name="pos_to" min="1" max="100" placeholder="Rank to" value="<?= $filters['pos_to'] !== null ? (int) $filters['pos_to'] : '' ?>">
+                <button type="submit" class="btn">Filter</button>
+                <?php if ($filtersActive): ?>
+                    <a class="btn" href="index.php?project=<?= $projectId ?><?= $search !== '' ? '&amp;search=' . rawurlencode($search) : '' ?>">Clear filters</a>
+                <?php endif; ?>
+            </form>
+
+            <?php if ($filtersActive): ?>
+                <p class="muted">Showing <?= count($rows) ?> of <?= count($allRows) ?> keyword<?= count($allRows) === 1 ? '' : 's' ?></p>
+            <?php endif; ?>
 
             <div class="table-wrap">
             <table class="kw">
@@ -291,7 +354,9 @@ final class KeywordListController
                 <?php if (count($rows) === 0): ?>
                     <tr>
                         <td colspan="5" class="empty">
-                            <?= $search !== '' ? 'No keywords match your search.' : 'No keywords yet — add your first one above.' ?>
+                            <?= $search !== ''
+                                ? 'No keywords match your search.'
+                                : ($filtersActive ? 'No keywords match your filters.' : 'No keywords yet — add your first one above.') ?>
                         </td>
                     </tr>
                 <?php endif; ?>

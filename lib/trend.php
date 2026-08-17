@@ -68,3 +68,24 @@ function keyword_rows_with_metrics(PDO $pdo, int $projectId, string $search = ''
     }
     return $rows;
 }
+
+function filter_rows(array $rows, string $trend = '', ?int $posFrom = null, ?int $posTo = null): array
+{
+    return array_values(array_filter($rows, static function (array $row) use ($trend, $posFrom, $posTo): bool {
+        if ($trend !== '' && ($row['trend'] ?? null) !== $trend) {
+            return false;
+        }
+        if ($posFrom !== null || $posTo !== null) {
+            if ($row['position'] === null) {
+                return false;
+            }
+            if ($posFrom !== null && (int) $row['position'] < $posFrom) {
+                return false;
+            }
+            if ($posTo !== null && (int) $row['position'] > $posTo) {
+                return false;
+            }
+        }
+        return true;
+    }));
+}

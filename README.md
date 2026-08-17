@@ -59,6 +59,8 @@ keyword in that project (last 30 days, ranks 1–100). Safe to re-run.
 - **S3** Accounts + CSRF — open sign-up, sign in/out, session-based auth; every
   POST (including the AJAX refresh) requires a per-session CSRF token; passwords
   hashed with `password_hash()`
+- **S4** Filter the keyword list by movement (improved / declined / stable) and
+  by rank range (min–max), combined with each other and with search
 
 ## Layout
 

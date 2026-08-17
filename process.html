@@ -307,6 +307,24 @@ controller can dispatch on <code>PATH_INFO</code> — <code>lib/</code> and the 
       users + lockout functions, Docker end-to-end.</li>
 </ul>
 
+<h3>S4 — Filter list by movement and rank <span style="font-weight:normal">(done)</span></h3>
+<ul>
+  <li>Pure <code>filter_rows()</code> in <code>lib/trend.php</code>: filters metric rows by trend
+      (<code>improved</code>/<code>declined</code>/<code>stable</code>) and/or rank range (min–max), or excludes
+      keywords with no position yet when a rank filter is active. Applied after metrics are computed, so it shares
+      the exact same position/trend logic as the table.</li>
+  <li>List page gains a filter bar: movement select + rank from/to number inputs. Rank inputs clamp to 1–100 and an
+      inverted range (from &gt; to) is normalized by swapping. Filters combine with search and with each other.</li>
+  <li>Filters survive round-trips: the search form carries the active filters as hidden fields, and the filter form
+      carries the active search; each bar has its own Clear that resets just its part. "Showing N of M" summary and a
+      "No keywords match your filters." empty state when a filter excludes everything.</li>
+  <li>Only the list render is affected: <code>refresh.php</code> still returns all project rows so the AJAX refresh
+      updates every row regardless of the current filter.</li>
+  <li>Tests: trend-only (improved/declined/stable counts match the seed data), rank-range-only (inclusive bounds),
+      inverted range, trend+rank combined, impossible filter (0 of 9 + empty-state message), search+filter
+      preservation in both forms, XSS/escaping of filter values, refresh regression, lint across all PHP.</li>
+</ul>
+
 <h2>Prompts &amp; fixes</h2>
 <p>Three real prompts that mattered — including one that failed — and concrete AI
 mistakes, how they were caught, and the fix.</p>
@@ -353,7 +371,7 @@ treat new keywords the same way.</p>
 
 <h2>Retrospective</h2>
 <p class="stub">What we'd do differently + total hours, updated each milestone.</p>
-<p>Hours spent so far: <strong>~10.5h</strong> (M1–M8 ~5h + S1 0.5h + S1 bug fix 0.5h + S2 2h + S3 2.5h).</p>
+<p>Hours spent so far: <strong>~11.5h</strong> (M1–M8 ~5h + S1 0.5h + S1 bug fix 0.5h + S2 2h + S3 2.5h + S4 1h).</p>
 
 </body>
 </html>
