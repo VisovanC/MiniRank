@@ -116,19 +116,7 @@ final class KeywordListController
 
     private function render(string $error, ?array $edit, string $draft, string $search): void
     {
-        $keywords = keyword_list($this->pdo, $search);
-        $histories = all_keyword_histories($this->pdo);
-        $rows = [];
-        foreach ($keywords as $k) {
-            $history = $histories[(int) $k['id']] ?? [];
-            $rows[] = [
-                'id' => (int) $k['id'],
-                'phrase' => $k['phrase'],
-                'created_at' => $k['created_at'],
-                'position' => latest_position($history),
-                'trend' => trend_from_history($history),
-            ];
-        }
+        $rows = keyword_rows_with_metrics($this->pdo, $search);
         $siteUrl = e($this->config['site']['url']);
         $lastDate = position_last_date($this->pdo);
         ?>
@@ -191,10 +179,10 @@ final class KeywordListController
                 </thead>
                 <tbody>
                 <?php foreach ($rows as $k): ?>
-                    <tr>
-                        <td><?= e($k['phrase']) ?></td>
-                        <td><?= $k['position'] !== null ? (int) $k['position'] : '—' ?></td>
-                        <td class="trend <?= e($k['trend'] ?? '') ?>"><?= $this->trendLabel($k['trend']) ?></td>
+                    <tr data-keyword-id="<?= (int) $k['id'] ?>">
+                        <td><a class="kw-link" href="keyword.php?id=<?= (int) $k['id'] ?>"><?= e($k['phrase']) ?></a></td>
+                        <td class="pos"><?= $k['position'] !== null ? (int) $k['position'] : '—' ?></td>
+                        <td class="trend <?= e($k['trend'] ?? '') ?>"><?= trend_label($k['trend']) ?></td>
                         <td><?= e($k['created_at']) ?></td>
                         <td class="right">
                             <a class="btn" href="index.php?edit=<?= (int) $k['id'] ?>">Edit</a>
@@ -221,15 +209,5 @@ final class KeywordListController
         </body>
         </html>
         <?php
-    }
-
-    private function trendLabel(?string $trend): string
-    {
-        return match ($trend) {
-            'improved' => '▲ Improved',
-            'declined' => '▼ Declined',
-            'stable' => '─ Stable',
-            default => '—',
-        };
     }
 }

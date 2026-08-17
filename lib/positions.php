@@ -50,3 +50,12 @@ function all_keyword_histories(PDO $pdo): array
     }
     return $histories;
 }
+
+function positions_for_keyword(PDO $pdo, int $keywordId): array
+{
+    $stmt = $pdo->prepare(
+        'SELECT id, date, position FROM positions WHERE keyword_id = :keyword_id ORDER BY date DESC, id DESC'
+    );
+    $stmt->execute(['keyword_id' => $keywordId]);
+    return $stmt->fetchAll();
+}

@@ -22,10 +22,22 @@ final class RefreshController
         }
 
         $result = refresh_today($this->pdo, static fn(): float => mt_rand() / mt_getrandmax());
+
+        $rows = [];
+        foreach (keyword_rows_with_metrics($this->pdo) as $row) {
+            $rows[] = [
+                'id' => $row['id'],
+                'position' => $row['position'],
+                'trend' => $row['trend'],
+                'trend_label' => trend_label($row['trend']),
+            ];
+        }
+
         echo json_encode([
             'ok' => true,
             'date' => $result['date'],
             'count' => $result['count'],
+            'rows' => $rows,
         ]);
     }
 }

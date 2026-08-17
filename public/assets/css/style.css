@@ -140,6 +140,16 @@ form.inline {
     color: #888;
 }
 
+a.kw-link {
+    color: #0056b3;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+a.kw-link:hover {
+    text-decoration: underline;
+}
+
 .empty {
     color: #888;
     text-align: center;

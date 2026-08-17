@@ -173,8 +173,22 @@ controller can dispatch on <code>PATH_INFO</code> — <code>lib/</code> and the 
       <code>null</code> on empty/single-row history) + user browser test.</li>
 </ul>
 
+<h3>M5 — Keyword detail page <span style="font-weight:normal">(done)</span></h3>
+<ul>
+  <li>Built: <code>positions_for_keyword()</code> (history query); <code>KeywordDetailController</code> +
+      <code>public/keyword.php</code> (<code>?id=</code>, 404 on missing/invalid id); keyword phrases on the list now
+      link to the detail page.</li>
+  <li>Detail page: current position + record count + full history table (newest first).</li>
+  <li>Bug found &amp; fixed during user review (logged in the failed-prompt slot): the Refresh button updated only the
+      status line, not the table. Fix: <code>refresh.php</code> returns the updated rows in JSON, <code>app.js</code>
+      rewrites the cells in place; row metrics shared via <code>keyword_rows_with_metrics()</code> +
+      <code>trend_label()</code> in <code>lib/trend.php</code>.</li>
+  <li>Tests: AI HTTP tests (history table, current position, 404 on <code>id=9999</code> and missing id, phrase links)
+      + user browser test that caught the refresh bug.</li>
+</ul>
+
 <h2>Prompts &amp; fixes</h2>
-<p>Three real prompts that mattered — including one that failed — and concrete AI
+<p>Four real prompts that mattered — including two that failed — and concrete AI
 mistakes, how they were caught, and the fix.</p>
 <h3>1. The foundation prompt (the most relevant one)</h3>
 <p><em>Prompt:</em> "I'm building a keyword-position-tracker web app for an
@@ -215,10 +229,28 @@ impossible if the working tree were being served (the file is on disk and serves
 HTTP 200 locally), which pointed at a stale image rather than unsaved code.</p>
 <p><em>Fix:</em> documented rebuild workflow; future milestones will state it
 explicitly in the commit note.</p>
+<h3>4. The one that failed — the M5 refresh button</h3>
+<p><em>Prompt:</em> "if i press the refresh positions button, nothing happens unless
+i refresh the web page as well"</p>
+<p><em>What went wrong:</em> the AJAX handler updated only the one-line status text.
+The Position/Trend cells in the table are server-rendered HTML and nothing in
+<code>app.js</code> touched them — so clicking Refresh silently changed the database
+but left the visible table stale until a full page reload. The fetch itself was never
+broken (a reload showed the new numbers), which made the bug easy to misread as
+"nothing happened".</p>
+<p><em>How it was caught:</em> the user pressed the button, saw no change, reloaded,
+and the positions were different — proof the server updated but the DOM didn't.</p>
+<p><em>Fix:</em> <code>refresh.php</code> now returns the refreshed rows
+(<code>id</code>, <code>position</code>, <code>trend</code>, <code>trend_label</code>)
+in the JSON; <code>app.js</code> rewrites each row's cells via
+<code>data-keyword-id</code>; and the row-metrics logic is shared with the list page
+(<code>keyword_rows_with_metrics()</code>) so the table and the endpoint always agree.
+Lesson: when an AJAX action "does nothing", check what the DOM is actually supposed to
+change — a hidden server-side success is not a visible result.</p>
 
 <h2>Retrospective</h2>
 <p class="stub">What we'd do differently + total hours, updated each milestone.</p>
-<p>Hours spent so far: <strong>~3h</strong> (0.5h planning + 1h M1 + 0.5h M2 + 0.5h M3 + 0.5h M4).</p>
+<p>Hours spent so far: <strong>~3.5h</strong> (0.5h planning + 1h M1 + 0.5h M2 + 0.5h M3 + 0.5h M4 + 0.5h M5 + refresh fix).</p>
 
 </body>
 </html>

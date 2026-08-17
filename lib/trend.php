@@ -40,3 +40,31 @@ function trend_from_history(array $history): ?string
     }
     return 'stable';
 }
+
+function trend_label(?string $trend): string
+{
+    return match ($trend) {
+        'improved' => '▲ Improved',
+        'declined' => '▼ Declined',
+        'stable' => '─ Stable',
+        default => '—',
+    };
+}
+
+function keyword_rows_with_metrics(PDO $pdo, string $search = ''): array
+{
+    $keywords = keyword_list($pdo, $search);
+    $histories = all_keyword_histories($pdo);
+    $rows = [];
+    foreach ($keywords as $k) {
+        $history = $histories[(int) $k['id']] ?? [];
+        $rows[] = [
+            'id' => (int) $k['id'],
+            'phrase' => $k['phrase'],
+            'created_at' => $k['created_at'],
+            'position' => latest_position($history),
+            'trend' => trend_from_history($history),
+        ];
+    }
+    return $rows;
+}

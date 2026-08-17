@@ -20,6 +20,7 @@
             if (!data.ok) {
                 throw new Error(data.error || 'Refresh failed');
             }
+            updateTable(data.rows);
             const keywordWord = data.count === 1 ? 'keyword' : 'keywords';
             status.textContent = 'Refreshed ' + data.count + ' ' + keywordWord
                 + ' for ' + data.date + ' — ' + new Date().toLocaleTimeString();
@@ -30,4 +31,25 @@
             btn.textContent = 'Refresh positions';
         }
     });
+
+    function updateTable(rows) {
+        if (!Array.isArray(rows)) {
+            return;
+        }
+        rows.forEach(function (row) {
+            const tr = document.querySelector('tr[data-keyword-id="' + row.id + '"]');
+            if (!tr) {
+                return;
+            }
+            const posCell = tr.querySelector('.pos');
+            if (posCell) {
+                posCell.textContent = row.position === null ? '—' : String(row.position);
+            }
+            const trendCell = tr.querySelector('.trend');
+            if (trendCell) {
+                trendCell.className = 'trend' + (row.trend ? ' ' + row.trend : '');
+                trendCell.textContent = row.trend_label;
+            }
+        });
+    }
 })();

@@ -50,7 +50,7 @@ schema.sql    idempotent schema, applied automatically on first run
 - [x] M2 Seeded history (30 days of demo positions)
 - [x] M3 Refresh simulation (AJAX, no reload)
 - [x] M4 Keyword list (position, 7-day trend, search)
-- [ ] M5 Keyword detail page (position history table)
+- [x] M5 Keyword detail page (position history table)
 - [ ] M6 Security basics
 - [ ] M7 Runs in 5 minutes (README + one-command start)
 - [ ] M8 Responsive
