@@ -117,6 +117,7 @@ final class KeywordListController
     {
         $keywords = keyword_list($this->pdo);
         $siteUrl = e($this->config['site']['url']);
+        $lastDate = position_last_date($this->pdo);
         ?>
         <!DOCTYPE html>
         <html lang="en">
@@ -129,7 +130,13 @@ final class KeywordListController
         <body>
         <main>
             <h1>MiniRank</h1>
-            <p class="muted">Tracking positions for <?= $siteUrl ?></p>
+            <div class="toolbar">
+                <p class="muted">Tracking positions for <?= $siteUrl ?></p>
+                <button type="button" id="refresh-btn" class="btn">Refresh positions</button>
+            </div>
+            <p id="refresh-status" class="muted">
+                <?php if ($lastDate !== null): ?>Last refreshed: <?= e($lastDate) ?><?php endif; ?>
+            </p>
 
             <?php if ($error !== ''): ?>
                 <p class="error"><?= e($error) ?></p>
@@ -183,6 +190,7 @@ final class KeywordListController
                 </tbody>
             </table>
         </main>
+        <script src="assets/js/app.js"></script>
         </body>
         </html>
         <?php

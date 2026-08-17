@@ -13,3 +13,21 @@ function simulate_positions(int $days, callable $rand): array
     }
     return $positions;
 }
+
+function refresh_today(PDO $pdo, callable $rand): array
+{
+    $date = date('Y-m-d');
+    $count = 0;
+    foreach (keyword_list($pdo) as $keyword) {
+        $previous = position_before($pdo, (int) $keyword['id'], $date);
+        if ($previous === null) {
+            $next = 1 + (int) floor($rand() * 100);
+        } else {
+            $next = $previous + (int) floor($rand() * 5) - 2;
+            $next = max(1, min(100, $next));
+        }
+        position_upsert($pdo, (int) $keyword['id'], $date, $next);
+        $count++;
+    }
+    return ['date' => $date, 'count' => $count];
+}

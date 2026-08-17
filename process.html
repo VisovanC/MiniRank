@@ -146,6 +146,21 @@ controller can dispatch on <code>PATH_INFO</code> — <code>lib/</code> and the 
       re-ran the script (no duplicates added), and spot-checked a keyword's full history.</li>
 </ul>
 
+<h3>M3 — Refresh simulation <span style="font-weight:normal">(done)</span></h3>
+<ul>
+  <li>Built: <code>lib/refresh.php</code> (<code>refresh_today</code> — random-walk step from yesterday's rank, injectable rng);
+      <code>lib/positions.php</code> (<code>position_upsert</code> via <code>ON CONFLICT</code>, <code>position_before</code>,
+      <code>position_last_date</code>); <code>RefreshController</code> + <code>public/refresh.php</code> (POST-only, JSON);
+      <code>public/assets/js/app.js</code> — <code>fetch()</code> on the "Refresh positions" button, no page reload;
+      toolbar + status line on the list page.</li>
+  <li>Upsert verified: re-clicking overwrites today's row — row count and distinct days stay constant.</li>
+  <li>Tests: AI endpoint tests (POST → <code>{"ok":true,"date":…,"count":9}</code>, repeat POST idempotent, GET → 405)
+      <em>and</em> user browser test of the button.</li>
+  <li>Incident: user saw the old page (no button, app.js 404) and suspected the template wasn't saved. Root cause:
+      Docker bakes code in at image build time (<code>COPY . /app</code>) — the running container served a stale image.
+      Fix: <code>docker compose up -d --build</code>. Lesson recorded in the failed-prompt slot below.</li>
+</ul>
+
 <h2>Prompts &amp; fixes</h2>
 <p>Three real prompts that mattered — including one that failed — and concrete AI
 mistakes, how they were caught, and the fix.</p>
@@ -174,11 +189,24 @@ error testing, and only then do we log + commit.</p>
 mismatched grep pattern during smoke testing made an edit-form check look like it
 failed. The app was fine; re-running with the correct pattern against a clean DB
 proved it. Lesson: clean up between test runs and sanity-check the test itself.</p>
-<h3>3. The one that failed <span class="stub">(to be filled)</span></h3>
+<h3>3. The one that failed — the M3 stale-page report</h3>
+<p><em>Prompt:</em> "index.php doesn't render the refresh button or 'Last refreshed'
+line, and app.js never loads per the Network tab… did the index.php template
+actually get updated, or did that change not get applied/saved?"</p>
+<p><em>What happened:</em> the change <em>was</em> saved and worked locally, but the
+user's Docker container kept serving the previous page. The AI's mistake: when the
+project chose Docker as the run target, the AI didn't flag that code is baked into
+the image at build time — so after every code change the user must rebuild
+(<code>docker compose up -d --build</code>), not just re-run compose.</p>
+<p><em>How it was caught:</em> the user's Network tab showed <code>app.js</code> 404 —
+impossible if the working tree were being served (the file is on disk and serves
+HTTP 200 locally), which pointed at a stale image rather than unsaved code.</p>
+<p><em>Fix:</em> documented rebuild workflow; future milestones will state it
+explicitly in the commit note.</p>
 
 <h2>Retrospective</h2>
 <p class="stub">What we'd do differently + total hours, updated each milestone.</p>
-<p>Hours spent so far: <strong>~2h</strong> (0.5h planning + 1h M1 + 0.5h M2).</p>
+<p>Hours spent so far: <strong>~2.5h</strong> (0.5h planning + 1h M1 + 0.5h M2 + 0.5h M3).</p>
 
 </body>
 </html>

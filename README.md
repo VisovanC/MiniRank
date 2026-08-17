@@ -48,7 +48,7 @@ schema.sql    idempotent schema, applied automatically on first run
 
 - [x] M1 Keywords CRUD (add / edit / delete)
 - [x] M2 Seeded history (30 days of demo positions)
-- [ ] M3 Refresh simulation (AJAX, no reload)
+- [x] M3 Refresh simulation (AJAX, no reload)
 - [ ] M4 Keyword list (position, 7-day trend, search)
 - [ ] M5 Keyword detail page (position history table)
 - [ ] M6 Security basics
