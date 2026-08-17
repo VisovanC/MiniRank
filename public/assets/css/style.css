@@ -156,13 +156,41 @@ a.kw-link:hover {
     padding: 1.5rem;
 }
 
+.table-wrap {
+    overflow-x: auto;
+}
+
+@media (max-width: 640px) {
+    th.col-added,
+    td.col-added {
+        display: none;
+    }
+}
+
 @media (max-width: 480px) {
     main {
         padding: 0.75rem;
     }
 
+    .card,
+    .search {
+        flex-direction: column;
+    }
+
+    .card input[type="text"],
+    .search input[type="text"] {
+        width: 100%;
+    }
+
+    .card button,
+    .search button,
+    .search .btn {
+        width: 100%;
+    }
+
     table.kw {
         font-size: 0.9rem;
+        min-width: 340px;
     }
 
     table.kw th,

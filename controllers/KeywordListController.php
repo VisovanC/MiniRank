@@ -167,13 +167,14 @@ final class KeywordListController
                 <?php endif; ?>
             </form>
 
+            <div class="table-wrap">
             <table class="kw">
                 <thead>
                 <tr>
                     <th>Keyword</th>
                     <th>Position</th>
                     <th>Trend (7d)</th>
-                    <th>Added</th>
+                    <th class="col-added">Added</th>
                     <th class="right">Actions</th>
                 </tr>
                 </thead>
@@ -183,7 +184,7 @@ final class KeywordListController
                         <td><a class="kw-link" href="keyword.php?id=<?= (int) $k['id'] ?>"><?= e($k['phrase']) ?></a></td>
                         <td class="pos"><?= $k['position'] !== null ? (int) $k['position'] : '—' ?></td>
                         <td class="trend <?= e($k['trend'] ?? '') ?>"><?= trend_label($k['trend']) ?></td>
-                        <td><?= e($k['created_at']) ?></td>
+                        <td class="col-added"><?= e($k['created_at']) ?></td>
                         <td class="right">
                             <a class="btn" href="index.php?edit=<?= (int) $k['id'] ?>">Edit</a>
                             <form method="post" action="index.php" class="inline"
@@ -204,6 +205,7 @@ final class KeywordListController
                 <?php endif; ?>
                 </tbody>
             </table>
+            </div>
         </main>
         <script src="assets/js/app.js"></script>
         </body>
