@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MiniRank — Build Process</title>
+  <style>
+    body { max-width: 900px; margin: 2rem auto; padding: 0 1rem; font: 16px/1.6 system-ui, sans-serif; color: #1a1a1a; }
+    pre { background: #f4f4f4; padding: 1rem; overflow-x: auto; font-size: 14px; }
+    code { background: #f4f4f4; padding: 0.1em 0.35em; border-radius: 3px; }
+    h1 { border-bottom: 2px solid #333; padding-bottom: .5rem; }
+    h2 { margin-top: 2.5rem; border-bottom: 1px solid #ccc; padding-bottom: .25rem; }
+    .stub { color: #888; font-style: italic; }
+  </style>
+</head>
+<body>
+
+<h1>MiniRank — Build Process Log</h1>
+<p>Keyword position tracker (assessment). This file is updated at the end of each
+M-milestone (M1–M8) and after any major change, so the whole build is explicit
+and easy to follow. Both the human and the AI edit this file.</p>
+
+<h2>Plan</h2>
+
+<h3>Scope &amp; stack</h3>
+<ul>
+  <li>Plain PHP 8 (no framework), PDO + SQLite, vanilla HTML/CSS/JS, one <code>fetch()</code>-driven AJAX refresh.</li>
+  <li>Single user, single website, no login for M1–M8. Multi-project / accounts are stretch goals the schema must not block.</li>
+  <li>M1–M8 in order; repo is committed after each milestone.</li>
+</ul>
+
+<h3>Key decisions</h3>
+<ul>
+  <li><strong>Controllers vs. lib split:</strong> thin controllers (request/response, read superglobals, echo)
+      vs. <code>lib/</code> pure functions (take data as arguments, never touch superglobals, never echo).
+      Keeps core logic unit-testable later with an in-memory SQLite PDO.</li>
+  <li><strong>Document root:</strong> <code>public/</code> served with <code>php -S localhost:8000 -t public</code>.</li>
+  <li><strong>Routing:</strong> plain PHP files as endpoints (3 routes). A front controller can replace them later without touching <code>lib/</code>.</li>
+  <li><strong>Refresh endpoint:</strong> <code>public/refresh.php</code>, POST-only, returns JSON.</li>
+  <li><strong>Bootstrap choke point:</strong> every entry file requires <code>lib/bootstrap.php</code> — the future home of session/auth/CSRF hooks.</li>
+  <li><strong>Decided 2026-08-17:</strong> trend rule = compare latest vs. 7 days earlier with ±1-rank tolerance (a 1-rank move is "stable"); refresh = upsert today's row (idempotent); edit = rename only (history kept), delete = hard delete + cascade; run target = <strong>Docker Compose</strong> (<code>php:8.2</code>); UI copy = English.</li>
+</ul>
+
+<h3>Directory structure (proposed)</h3>
+<pre>
+MiniRank/
+├── public/                     # document root (php -S -t public)
+│   ├── index.php               # keyword list page (HTML)
+│   ├── keyword.php             # keyword detail page (HTML), ?id=
+│   ├── refresh.php             # AJAX JSON endpoint (POST)
+│   └── assets/
+│   ├── css/style.css
+│       └── js/app.js           # fetch() to refresh.php, updates table w/o reload
+├── Dockerfile                  # php:8.2-cli/alpine, pdo_sqlite
+├── docker-compose.yml          # serves public/ with php -S, seed as a service/command
+├── controllers/                # thin: parse input → call lib → render/echo
+│   ├── KeywordListController.php
+│   ├── KeywordDetailController.php
+│   └── RefreshController.php
+├── lib/                        # pure logic: no superglobals, no echo
+│   ├── bootstrap.php           # config + PDO + requires (+ later auth/CSRF)
+│   ├── db.php                  # PDO factory (only place the DSN is built)
+│   ├── keywords.php            # keyword CRUD
+│   ├── positions.php           # history + latest-position queries
+│   ├── trend.php               # trend indicator (pure function)
+│   ├── refresh.php             # simulation, deterministic (injectable rng)
+│   └── seed.php                # seeding logic
+├── config/
+│   └── config.php              # returns array: db path, site url, trend threshold
+├── scripts/
+│   └── seed.php                # CLI: php scripts/seed.php
+├── data/                       # SQLite file (gitignored)
+├── schema.sql                  # idempotent CREATE TABLE IF NOT EXISTS
+├── .gitignore
+├── README.md
+└── process.html
+</pre>
+
+<h3>SQLite schema (proposed)</h3>
+<pre>
+CREATE TABLE IF NOT EXISTS keywords (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  phrase     TEXT    NOT NULL UNIQUE,
+  created_at TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS positions (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  keyword_id INTEGER NOT NULL REFERENCES keywords(id) ON DELETE CASCADE,
+  date       TEXT    NOT NULL,                       -- 'YYYY-MM-DD'
+  position   INTEGER NOT NULL CHECK (position BETWEEN 1 AND 100),
+  created_at TEXT    NOT NULL DEFAULT (datetime('now')),
+  UNIQUE (keyword_id, date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_positions_keyword_date ON positions (keyword_id, date);
+CREATE INDEX IF NOT EXISTS idx_positions_date         ON positions (date);
+</pre>
+<ul>
+  <li><code>UNIQUE (keyword_id, date)</code> guarantees one position per keyword per day → makes refresh an upsert.</li>
+  <li>Multi-project later = add a <code>projects</code> table + a nullable <code>keywords.project_id</code> column. Today the site URL lives in <code>config.php</code>, so nothing blocks that.</li>
+</ul>
+
+<h3>Routing choice</h3>
+<p>Plain PHP files as endpoints, not a dispatcher: the app has only 3 routes, so a
+hand-rolled router is indirection without payoff. Each file is obviously a route,
+which suits an assessment that values clarity. When multi-project arrives, a front
+controller can dispatch on <code>PATH_INFO</code> — <code>lib/</code> and the controllers don't change.</p>
+
+<h3>CSRF / auth hooks (stretch — slotted in, not built)</h3>
+<ul>
+  <li>Every entry file starts with <code>require lib/bootstrap.php</code>. Later, <code>require_auth()</code> and a CSRF token check on POST endpoints go in right there — no rewrite.</li>
+  <li><code>refresh.php</code> is already POST-only, so CSRF validation later covers exactly one mutation.</li>
+  <li>Sessions/superglobals stay in bootstrap + controllers; <code>lib/</code> stays clean and testable.</li>
+</ul>
+
+<h3>What I'd change in hindsight</h3>
+<p class="stub">To be written as we go (first entry expected after M1–M3).</p>
+
+<h2>Prompts &amp; fixes</h2>
+<p>Three real prompts that mattered — including one that failed — and concrete AI
+mistakes, how they were caught, and the fix.</p>
+<h3>1. The foundation prompt (the most relevant one)</h3>
+<p><em>Prompt:</em> "I'm building a keyword-position-tracker web app for an
+assessment. Stack: plain PHP (no framework), PDO for the DB, SQLite, vanilla
+HTML/CSS/JS, plain AJAX (fetch) for one dynamic refresh action… Do NOT implement
+anything yet… propose ONLY: 1) directory structure separating controllers from a
+lib/ of pure functions, 2) the SQLite schema, 3) the routing approach, 4) where
+CSRF/auth hooks slot in later… also create a process.html kept in three sections
+(Plan / Prompts &amp; fixes / Retrospective)."</p>
+<p><em>Why it mattered:</em> this single prompt forced a plan-first session and set
+every architectural decision before the first line of code — the controller/lib
+split (testable core), the schema's <code>UNIQUE(keyword_id, date)</code> upsert
+design, plain-file routing, and the <code>bootstrap.php</code> choke point for
+future auth/CSRF. Everything since builds on these choices.</p>
+<p><em>Mistakes:</em> none in this one — planning only, no code written. (The
+failed prompt is logged in slot 3.)</p>
+<h3>2. <span class="stub">(to be filled)</span></h3>
+<h3>3. The one that failed <span class="stub">(to be filled)</span></h3>
+
+<h2>Retrospective</h2>
+<p class="stub">What we'd do differently + total hours, updated each milestone.</p>
+<p>Hours spent so far: <strong>~0.5h</strong> (planning session).</p>
+
+</body>
+</html>
