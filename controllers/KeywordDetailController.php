@@ -61,6 +61,9 @@ final class KeywordDetailController
                 <p class="error">Keyword not found.</p>
             <?php else: ?>
                 <h2><?= e($keyword['phrase']) ?></h2>
+                <p>
+                    <a class="btn" href="export.php?type=history&amp;id=<?= (int) $keyword['id'] ?>&amp;project=<?= $projectId ?>">Export history CSV</a>
+                </p>
                 <?php
                 $history = positions_for_keyword($this->pdo, (int) $keyword['id']);
                 $current = $history !== [] ? (int) $history[0]['position'] : null;

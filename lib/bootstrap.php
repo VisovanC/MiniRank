@@ -15,6 +15,7 @@ require_once __DIR__ . '/chart.php';
 require_once __DIR__ . '/seed.php';
 require_once __DIR__ . '/users.php';
 require_once __DIR__ . '/csrf.php';
+require_once __DIR__ . '/csv.php';
 require_once __DIR__ . '/escape.php';
 
 header('X-Content-Type-Options: nosniff');

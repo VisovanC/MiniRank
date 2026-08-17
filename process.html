@@ -325,6 +325,28 @@ controller can dispatch on <code>PATH_INFO</code> — <code>lib/</code> and the 
       preservation in both forms, XSS/escaping of filter values, refresh regression, lint across all PHP.</li>
 </ul>
 
+<h3>S5 — CSV export <span style="font-weight:normal">(done)</span></h3>
+<ul>
+  <li>Pure <code>csv_encode()</code> in <code>lib/csv.php</code> — RFC-style quoting (fields with commas, quotes or
+      line breaks get quoted, inner quotes doubled); unit-tested for those cases.</li>
+  <li><code>ExportController</code> + <code>public/export.php</code>, auth-gated, two types:
+    <ul>
+      <li><code>export.php?project=N&amp;search=…&amp;trend=…&amp;pos_from=…&amp;pos_to=…</code> — the current keyword
+          list as CSV (<em>export what you see</em>: the toolbar button carries the active search + filters).</li>
+      <li><code>export.php?type=history&amp;id=N&amp;project=M</code> — that keyword's position history, scoped to the
+          project (404 otherwise, same rule as the detail page).</li>
+    </ul>
+  </li>
+  <li>Refactor: extracted the filter parsing from <code>KeywordListController::readFilters()</code> into a pure
+      <code>normalize_filters()</code> in <code>lib/trend.php</code>, shared by the list render and the export
+      controller (no duplicated logic).</li>
+  <li>Output: UTF-8 BOM (Excel), <code>Content-Disposition: attachment</code>, <code>X-Content-Type-Options: nosniff</code>.
+      Excel shows the timestamp column as <code>####</code> until widened — a display quirk, the value is intact.</li>
+  <li>Tests: headers/BOM presence, full + filtered + search+filter export row counts match the page, history newest
+      first, 404 on bad id, 302 when unauthenticated, <code>csv_encode()</code> quoting unit test, list-filter
+      regression after the refactor, lint, Docker end-to-end.</li>
+</ul>
+
 <h2>Prompts &amp; fixes</h2>
 <p>Three real prompts that mattered — including one that failed — and concrete AI
 mistakes, how they were caught, and the fix.</p>
@@ -371,7 +393,7 @@ treat new keywords the same way.</p>
 
 <h2>Retrospective</h2>
 <p class="stub">What we'd do differently + total hours, updated each milestone.</p>
-<p>Hours spent so far: <strong>~11.5h</strong> (M1–M8 ~5h + S1 0.5h + S1 bug fix 0.5h + S2 2h + S3 2.5h + S4 1h).</p>
+<p>Hours spent so far: <strong>~13h</strong> (M1–M8 ~5h + S1 0.5h + S1 bug fix 0.5h + S2 2h + S3 2.5h + S4 1h + S5 1.5h).</p>
 
 </body>
 </html>

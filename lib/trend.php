@@ -69,6 +69,22 @@ function keyword_rows_with_metrics(PDO $pdo, int $projectId, string $search = ''
     return $rows;
 }
 
+function normalize_filters(array $input): array
+{
+    $trend = (string) ($input['trend'] ?? '');
+    if (!in_array($trend, ['improved', 'declined', 'stable'], true)) {
+        $trend = '';
+    }
+    $from = filter_var($input['pos_from'] ?? null, FILTER_VALIDATE_INT);
+    $to = filter_var($input['pos_to'] ?? null, FILTER_VALIDATE_INT);
+    $posFrom = ($from !== null && $from !== false) ? max(1, min(100, $from)) : null;
+    $posTo = ($to !== null && $to !== false) ? max(1, min(100, $to)) : null;
+    if ($posFrom !== null && $posTo !== null && $posFrom > $posTo) {
+        [$posFrom, $posTo] = [$posTo, $posFrom];
+    }
+    return ['trend' => $trend, 'pos_from' => $posFrom, 'pos_to' => $posTo];
+}
+
 function filter_rows(array $rows, string $trend = '', ?int $posFrom = null, ?int $posTo = null): array
 {
     return array_values(array_filter($rows, static function (array $row) use ($trend, $posFrom, $posTo): bool {

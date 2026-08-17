@@ -61,6 +61,8 @@ keyword in that project (last 30 days, ranks 1–100). Safe to re-run.
   hashed with `password_hash()`
 - **S4** Filter the keyword list by movement (improved / declined / stable) and
   by rank range (min–max), combined with each other and with search
+- **S5** CSV export — download the current (search- and filter-aware) keyword list
+  or a keyword's position history; UTF-8 BOM + proper quoting for Excel
 
 ## Layout
 

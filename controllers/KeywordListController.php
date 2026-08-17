@@ -27,7 +27,7 @@ final class KeywordListController
         $edit = null;
         $phrase = '';
         $search = trim((string) ($_GET['search'] ?? ''));
-        $filters = $this->readFilters();
+        $filters = normalize_filters($_GET);
 
         if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             $action = (string) ($_POST['action'] ?? '');
@@ -74,22 +74,6 @@ final class KeywordListController
         }
 
         $this->render($project, $error, $showProjectForm, $edit, $draft, $search, $filters);
-    }
-
-    private function readFilters(): array
-    {
-        $trend = (string) ($_GET['trend'] ?? '');
-        if (!in_array($trend, ['improved', 'declined', 'stable'], true)) {
-            $trend = '';
-        }
-        $from = filter_input(INPUT_GET, 'pos_from', FILTER_VALIDATE_INT);
-        $to = filter_input(INPUT_GET, 'pos_to', FILTER_VALIDATE_INT);
-        $posFrom = ($from !== null && $from !== false) ? max(1, min(100, $from)) : null;
-        $posTo = ($to !== null && $to !== false) ? max(1, min(100, $to)) : null;
-        if ($posFrom !== null && $posTo !== null && $posFrom > $posTo) {
-            [$posFrom, $posTo] = [$posTo, $posFrom];
-        }
-        return ['trend' => $trend, 'pos_from' => $posFrom, 'pos_to' => $posTo];
     }
 
     private function resolveProject(): array
@@ -207,6 +191,11 @@ final class KeywordListController
         if ($filters['pos_to'] !== null) {
             $filterQuery .= '&amp;pos_to=' . (int) $filters['pos_to'];
         }
+        $exportQuery = 'project=' . $projectId;
+        if ($search !== '') {
+            $exportQuery .= '&amp;search=' . rawurlencode($search);
+        }
+        $exportQuery .= $filterQuery;
         $lastDate = position_last_date($this->pdo, $projectId);
         ?>
         <!DOCTYPE html>
@@ -224,6 +213,7 @@ final class KeywordListController
             <div class="toolbar">
                 <p class="muted">Project: <strong><?= e($project['name']) ?></strong> — tracking positions for <?= e($project['site_url']) ?></p>
                 <button type="button" id="refresh-btn" class="btn" data-project="<?= $projectId ?>">Refresh positions</button>
+                <a class="btn" href="export.php?<?= $exportQuery ?>">Export CSV</a>
             </div>
             <p id="refresh-status" class="muted">
                 <?php if ($lastDate !== null): ?>Last refreshed: <?= e($lastDate) ?><?php endif; ?>
