@@ -38,7 +38,7 @@ and easy to follow. Both the human and the AI edit this file.</p>
   <li><strong>Routing:</strong> plain PHP files as endpoints (3 routes). A front controller can replace them later without touching <code>lib/</code>.</li>
   <li><strong>Refresh endpoint:</strong> <code>public/refresh.php</code>, POST-only, returns JSON.</li>
   <li><strong>Bootstrap choke point:</strong> every entry file requires <code>lib/bootstrap.php</code> — the future home of session/auth/CSRF hooks.</li>
-  <li><strong>Decided 2026-08-17:</strong> trend rule = compare latest vs. 7 days earlier with ±1-rank tolerance (a 1-rank move is "stable"); refresh = upsert today's row (idempotent); edit = rename only (history kept), delete = hard delete + cascade; run target = <strong>Docker Compose</strong> (<code>php:8.2</code>); UI copy = English.</li>
+  <li><strong>Decided 2026-08-17:</strong> trend rule = compare latest vs. 7 days earlier with ±1-rank tolerance (a 1-rank move is "stable"); refresh = upsert today's row (idempotent); edit = rename only (history kept), delete = hard delete + cascade; run target = <strong>Docker Compose</strong> (<code>php:8.2</code>); UI copy = English; keyword search = <strong>case-insensitive</strong> via SQLite default <code>LIKE</code> (ASCII fold — fine for English keywords; non-ASCII folding intentionally out of scope).</li>
 </ul>
 
 <h3>Directory structure (proposed)</h3>
@@ -117,6 +117,23 @@ controller can dispatch on <code>PATH_INFO</code> — <code>lib/</code> and the 
 <h3>What I'd change in hindsight</h3>
 <p class="stub">To be written as we go (first entry expected after M1–M3).</p>
 
+<h2>Milestones</h2>
+
+<h3>M1 — Keywords CRUD <span style="font-weight:normal">(done)</span></h3>
+<ul>
+  <li>Built: schema + auto-init, <code>lib/</code> pure functions (db, schema, keywords, escape), thin
+      <code>KeywordListController</code>, <code>public/index.php</code>, responsive CSS, Dockerfile + compose, README.</li>
+  <li>Add / edit (rename, history kept) / delete (hard, cascades) / duplicate rejected via the UNIQUE
+      constraint (caught as a constraint violation), whitespace-only rejected by trim+empty validation.</li>
+  <li>Security in place from day one: all queries parameterized, all output through <code>e()</code>
+      (htmlspecialchars). XSS payload renders as literal text.</li>
+  <li>Tests: AI smoke tests over real HTTP (empty state, create, duplicate error, XSS escaping,
+      edit form prefill, update, delete) <em>and</em> manual error testing by the user — duplicate
+      rejected, whitespace-only rejected, XSS rendered literally (not executed), edit/delete work,
+      and data survives a reload (persisted to SQLite, not in-memory).</li>
+  <li>Note: Docker stack files added but image not built yet (daemon was down during the session).</li>
+</ul>
+
 <h2>Prompts &amp; fixes</h2>
 <p>Three real prompts that mattered — including one that failed — and concrete AI
 mistakes, how they were caught, and the fix.</p>
@@ -135,12 +152,21 @@ design, plain-file routing, and the <code>bootstrap.php</code> choke point for
 future auth/CSRF. Everything since builds on these choices.</p>
 <p><em>Mistakes:</em> none in this one — planning only, no code written. (The
 failed prompt is logged in slot 3.)</p>
-<h3>2. <span class="stub">(to be filled)</span></h3>
+<h3>2. The M1 build-and-review prompt</h3>
+<p><em>Prompt:</em> "lets go ahead with M1 but before commiting i want to check it,
+so just build it and we ll commit it after i give the go ahead."</p>
+<p><em>Why it mattered:</em> established the review-before-commit workflow we now
+repeat every milestone — the agent builds and self-tests, the human does their own
+error testing, and only then do we log + commit.</p>
+<p><em>Mistakes:</em> none functional, but one test-script slip on my side — a
+mismatched grep pattern during smoke testing made an edit-form check look like it
+failed. The app was fine; re-running with the correct pattern against a clean DB
+proved it. Lesson: clean up between test runs and sanity-check the test itself.</p>
 <h3>3. The one that failed <span class="stub">(to be filled)</span></h3>
 
 <h2>Retrospective</h2>
 <p class="stub">What we'd do differently + total hours, updated each milestone.</p>
-<p>Hours spent so far: <strong>~0.5h</strong> (planning session).</p>
+<p>Hours spent so far: <strong>~1.5h</strong> (0.5h planning + 1h M1 build, testing, log).</p>
 
 </body>
 </html>
