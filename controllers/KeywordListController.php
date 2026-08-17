@@ -20,6 +20,7 @@ final class KeywordListController
         $editId = null;
         $edit = null;
         $phrase = '';
+        $search = trim((string) ($_GET['search'] ?? ''));
 
         if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             $action = (string) ($_POST['action'] ?? '');
@@ -57,7 +58,7 @@ final class KeywordListController
             }
         }
 
-        $this->render($error, $edit, $draft);
+        $this->render($error, $edit, $draft, $search);
     }
 
     private function create(string $phrase): string
@@ -113,9 +114,21 @@ final class KeywordListController
         return '';
     }
 
-    private function render(string $error, ?array $edit, string $draft): void
+    private function render(string $error, ?array $edit, string $draft, string $search): void
     {
-        $keywords = keyword_list($this->pdo);
+        $keywords = keyword_list($this->pdo, $search);
+        $histories = all_keyword_histories($this->pdo);
+        $rows = [];
+        foreach ($keywords as $k) {
+            $history = $histories[(int) $k['id']] ?? [];
+            $rows[] = [
+                'id' => (int) $k['id'],
+                'phrase' => $k['phrase'],
+                'created_at' => $k['created_at'],
+                'position' => latest_position($history),
+                'trend' => trend_from_history($history),
+            ];
+        }
         $siteUrl = e($this->config['site']['url']);
         $lastDate = position_last_date($this->pdo);
         ?>
@@ -158,18 +171,30 @@ final class KeywordListController
                 </form>
             <?php endif; ?>
 
+            <form method="get" action="index.php" class="search">
+                <input type="text" name="search" value="<?= e($search) ?>" placeholder="Search keywords…">
+                <button type="submit" class="btn">Search</button>
+                <?php if ($search !== ''): ?>
+                    <a class="btn" href="index.php">Clear</a>
+                <?php endif; ?>
+            </form>
+
             <table class="kw">
                 <thead>
                 <tr>
                     <th>Keyword</th>
+                    <th>Position</th>
+                    <th>Trend (7d)</th>
                     <th>Added</th>
                     <th class="right">Actions</th>
                 </tr>
                 </thead>
                 <tbody>
-                <?php foreach ($keywords as $k): ?>
+                <?php foreach ($rows as $k): ?>
                     <tr>
                         <td><?= e($k['phrase']) ?></td>
+                        <td><?= $k['position'] !== null ? (int) $k['position'] : '—' ?></td>
+                        <td class="trend <?= e($k['trend'] ?? '') ?>"><?= $this->trendLabel($k['trend']) ?></td>
                         <td><?= e($k['created_at']) ?></td>
                         <td class="right">
                             <a class="btn" href="index.php?edit=<?= (int) $k['id'] ?>">Edit</a>
@@ -182,9 +207,11 @@ final class KeywordListController
                         </td>
                     </tr>
                 <?php endforeach; ?>
-                <?php if (count($keywords) === 0): ?>
+                <?php if (count($rows) === 0): ?>
                     <tr>
-                        <td colspan="3" class="empty">No keywords yet — add your first one above.</td>
+                        <td colspan="5" class="empty">
+                            <?= $search !== '' ? 'No keywords match your search.' : 'No keywords yet — add your first one above.' ?>
+                        </td>
                     </tr>
                 <?php endif; ?>
                 </tbody>
@@ -194,5 +221,15 @@ final class KeywordListController
         </body>
         </html>
         <?php
+    }
+
+    private function trendLabel(?string $trend): string
+    {
+        return match ($trend) {
+            'improved' => '▲ Improved',
+            'declined' => '▼ Declined',
+            'stable' => '─ Stable',
+            default => '—',
+        };
     }
 }

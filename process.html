@@ -161,6 +161,18 @@ controller can dispatch on <code>PATH_INFO</code> — <code>lib/</code> and the 
       Fix: <code>docker compose up -d --build</code>. Lesson recorded in the failed-prompt slot below.</li>
 </ul>
 
+<h3>M4 — Keyword list <span style="font-weight:normal">(done)</span></h3>
+<ul>
+  <li>Built: <code>lib/trend.php</code> (<code>latest_position</code>, <code>trend_from_history</code> — latest vs. 7 days earlier,
+      ±1 tolerance, falls back to the earliest row inside the 7-day window, <code>null</code> when &lt;2 data points);
+      <code>all_keyword_histories</code> (single query, no N+1); text search on the list with <code>%</code>/<code>_</code>/<code>\</code>
+      escaped in the LIKE pattern; new columns Position, Trend (7d), Added; search box + Clear.</li>
+  <li>Trend display: ▲ Improved / ▼ Declined / ─ Stable (color-coded), "—" when no history.</li>
+  <li>Tests: AI HTTP tests (headers render, all three trend states present, search "seo" → 3 hits, no-match message,
+      literal <code>%</code> doesn't match everything) + lib unit checks (exact-7d compare, window fallback, ±1 tolerance,
+      <code>null</code> on empty/single-row history) + user browser test.</li>
+</ul>
+
 <h2>Prompts &amp; fixes</h2>
 <p>Three real prompts that mattered — including one that failed — and concrete AI
 mistakes, how they were caught, and the fix.</p>
@@ -206,7 +218,7 @@ explicitly in the commit note.</p>
 
 <h2>Retrospective</h2>
 <p class="stub">What we'd do differently + total hours, updated each milestone.</p>
-<p>Hours spent so far: <strong>~2.5h</strong> (0.5h planning + 1h M1 + 0.5h M2 + 0.5h M3).</p>
+<p>Hours spent so far: <strong>~3h</strong> (0.5h planning + 1h M1 + 0.5h M2 + 0.5h M3 + 0.5h M4).</p>
 
 </body>
 </html>

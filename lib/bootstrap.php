@@ -9,6 +9,7 @@ require_once __DIR__ . '/schema.php';
 require_once __DIR__ . '/keywords.php';
 require_once __DIR__ . '/positions.php';
 require_once __DIR__ . '/refresh.php';
+require_once __DIR__ . '/trend.php';
 require_once __DIR__ . '/escape.php';
 
 $dataDir = dirname($config['db']['path']);

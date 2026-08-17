@@ -122,6 +122,24 @@ form.inline {
     display: inline;
 }
 
+.search {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.trend.improved {
+    color: #0a7d0a;
+}
+
+.trend.declined {
+    color: #b00;
+}
+
+.trend.stable {
+    color: #888;
+}
+
 .empty {
     color: #888;
     text-align: center;

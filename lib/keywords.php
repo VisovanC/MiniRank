@@ -2,11 +2,23 @@
 
 declare(strict_types=1);
 
-function keyword_list(PDO $pdo): array
+function keyword_list(PDO $pdo, string $search = ''): array
 {
-    return $pdo
-        ->query('SELECT id, phrase, created_at FROM keywords ORDER BY phrase COLLATE NOCASE ASC')
-        ->fetchAll();
+    $sql = 'SELECT id, phrase, created_at FROM keywords';
+    $params = [];
+    if ($search !== '') {
+        $sql .= " WHERE phrase LIKE :search ESCAPE '\\'";
+        $params['search'] = '%' . keyword_like_escape($search) . '%';
+    }
+    $sql .= ' ORDER BY phrase COLLATE NOCASE ASC';
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    return $stmt->fetchAll();
+}
+
+function keyword_like_escape(string $value): string
+{
+    return str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $value);
 }
 
 function keyword_find(PDO $pdo, int $id): ?array

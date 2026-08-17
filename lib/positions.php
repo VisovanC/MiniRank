@@ -35,3 +35,18 @@ function position_last_date(PDO $pdo): ?string
     $value = $pdo->query('SELECT MAX(date) FROM positions')->fetchColumn();
     return $value === false || $value === null ? null : (string) $value;
 }
+
+function all_keyword_histories(PDO $pdo): array
+{
+    $rows = $pdo
+        ->query('SELECT keyword_id, date, position FROM positions ORDER BY keyword_id, date ASC, id ASC')
+        ->fetchAll();
+    $histories = [];
+    foreach ($rows as $row) {
+        $histories[(int) $row['keyword_id']][] = [
+            'date' => $row['date'],
+            'position' => (int) $row['position'],
+        ];
+    }
+    return $histories;
+}
