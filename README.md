@@ -40,6 +40,18 @@ Locally: `php scripts/seed.php`. Idempotent — inserts the demo keywords only i
 the Default project has none, then fills in any missing daily positions for every
 keyword in that project (last 30 days, ranks 1–100). Safe to re-run.
 
+## Run the tests
+
+```
+php tests/run.php
+```
+
+Dependency-free runner over the pure `lib/` functions (uses an in-memory SQLite,
+so it touches no real data). Inside Docker: `docker compose exec app php tests/run.php`
+— and the image build itself runs them, so `docker compose up -d --build` fails
+if any test breaks. The container also has a healthcheck against `/login.php`;
+check it with `docker compose ps` (the app column shows "healthy").
+
 ## What it does
 
 - **M1** Keywords CRUD (add / edit / delete)

@@ -41,37 +41,50 @@ and easy to follow. Both the human and the AI edit this file.</p>
   <li><strong>Decided 2026-08-17:</strong> trend rule = compare latest vs. 7 days earlier with ±1-rank tolerance (a 1-rank move is "stable"); refresh = upsert today's row (idempotent); edit = rename only (history kept), delete = hard delete + cascade; run target = <strong>Docker Compose</strong> (<code>php:8.2</code>); UI copy = English; keyword search = <strong>case-insensitive</strong> via SQLite default <code>LIKE</code> (ASCII fold — fine for English keywords; non-ASCII folding intentionally out of scope).</li>
 </ul>
 
-<h3>Directory structure (proposed)</h3>
+<h3>Directory structure</h3>
 <pre>
 MiniRank/
 ├── public/                     # document root (php -S -t public)
 │   ├── index.php               # keyword list page (HTML)
 │   ├── keyword.php             # keyword detail page (HTML), ?id=
+│   ├── login.php / register.php / logout.php
 │   ├── refresh.php             # AJAX JSON endpoint (POST)
+│   ├── export.php              # CSV download endpoint (GET)
 │   └── assets/
-│   ├── css/style.css
+│       ├── css/style.css
 │       └── js/app.js           # fetch() to refresh.php, updates table w/o reload
-├── Dockerfile                  # php:8.2-cli/alpine, pdo_sqlite
-├── docker-compose.yml          # serves public/ with php -S, seed as a service/command
+├── Dockerfile                  # php:8.2-cli/alpine, pdo_sqlite; runs tests at build, healthcheck
+├── docker-compose.yml          # serves public/ with php -S, data/ volume, restart policy
 ├── controllers/                # thin: parse input → call lib → render/echo
 │   ├── KeywordListController.php
 │   ├── KeywordDetailController.php
-│   └── RefreshController.php
-├── lib/                        # pure logic: no superglobals, no echo
-│   ├── bootstrap.php           # config + PDO + requires (+ later auth/CSRF)
+│   ├── RefreshController.php
+│   ├── ExportController.php
+│   └── AuthController.php / RegisterController.php / LogoutController.php
+├── lib/                        # pure logic: no superglobals, no echo (unit-tested)
+│   ├── bootstrap.php           # sessions, CSRF enforcement, CSP, auth helpers, requires
 │   ├── db.php                  # PDO factory (only place the DSN is built)
-│   ├── keywords.php            # keyword CRUD
+│   ├── schema.php              # idempotent schema + legacy migrations
+│   ├── projects.php            # project CRUD + resolution
+│   ├── keywords.php            # keyword CRUD + LIKE-escape search
 │   ├── positions.php           # history + latest-position queries
-│   ├── trend.php               # trend indicator (pure function)
+│   ├── trend.php               # trend indicator, filter_rows(), normalize_filters()
+│   ├── chart.php               # chart_svg() (pure)
+│   ├── csv.php                 # csv_encode() (pure)
 │   ├── refresh.php             # simulation, deterministic (injectable rng)
-│   └── seed.php                # seeding logic
+│   ├── seed.php                # seeding logic
+│   ├── users.php               # accounts + lockout
+│   ├── csrf.php                # token generation/validation (pure)
+│   └── escape.php              # e() output escaping
+├── tests/                      # dependency-free unit tests
+│   └── run.php + *_test.php    # php tests/run.php (in-memory SQLite)
 ├── config/
-│   └── config.php              # returns array: db path, site url, trend threshold
+│   └── config.php              # returns array: db path, site url
 ├── scripts/
 │   └── seed.php                # CLI: php scripts/seed.php
-├── data/                       # SQLite file (gitignored)
+├── data/                       # SQLite file (gitignored, volume-mounted)
 ├── schema.sql                  # idempotent CREATE TABLE IF NOT EXISTS
-├── .gitignore
+├── .gitignore / .dockerignore
 ├── README.md
 └── process.html
 </pre>
@@ -367,6 +380,21 @@ controller can dispatch on <code>PATH_INFO</code> — <code>lib/</code> and the 
       controller) — the code itself was correct, which is the test suite doing its job.</li>
 </ul>
 
+<h3>S7 — Docker/deployment polish <span style="font-weight:normal">(done)</span></h3>
+<ul>
+  <li>Build-time test gate: <code>RUN php tests/run.php</code> in the Dockerfile — the image only builds if all 80
+      unit tests pass, so <code>docker compose up -d --build</code> fails on a broken build instead of shipping it.</li>
+  <li>Healthcheck against <code>/login.php</code>; container shows <code>healthy</code> in <code>docker compose ps</code>.
+      Bug found during dev: busybox <code>wget localhost</code> resolves to <code>::1</code> first and the server listens
+      on IPv4 only → connection refused; fixed by healthchecking <code>127.0.0.1</code> explicitly.</li>
+  <li>Compose: <code>restart: unless-stopped</code> (container comes back up after a daemon/host restart). Data
+      persistence was already handled by the <code>./data</code> bind mount (gitignored DB).</li>
+  <li>Docs: "Run the tests" section in README (local + in-container + build-time behavior); directory structure in
+      this file updated to match the current codebase.</li>
+  <li>Verified: fresh build passes the test gate, container reaches <code>healthy</code>, host can reach the app, and
+      the running DB data is untouched.</li>
+</ul>
+
 <h2>Prompts &amp; fixes</h2>
 <p>Three real prompts that mattered — including one that failed — and concrete AI
 mistakes, how they were caught, and the fix.</p>
@@ -413,7 +441,7 @@ treat new keywords the same way.</p>
 
 <h2>Retrospective</h2>
 <p class="stub">What we'd do differently + total hours, updated each milestone.</p>
-<p>Hours spent so far: <strong>~14.5h</strong> (M1–M8 ~5h + S1 0.5h + S1 bug fix 0.5h + S2 2h + S3 2.5h + S4 1h + S5 1.5h + S6 1.5h).</p>
+<p>Hours spent so far: <strong>~16h</strong> (M1–M8 ~5h + S1 0.5h + S1 bug fix 0.5h + S2 2h + S3 2.5h + S4 1h + S5 1.5h + S6 1.5h + S7 1.5h).</p>
 
 </body>
 </html>
