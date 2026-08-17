@@ -134,6 +134,18 @@ controller can dispatch on <code>PATH_INFO</code> — <code>lib/</code> and the 
   <li>Note: Docker stack files added but image not built yet (daemon was down during the session).</li>
 </ul>
 
+<h3>M2 — Seeded history <span style="font-weight:normal">(done)</span></h3>
+<ul>
+  <li>Built: <code>scripts/seed.php</code>; <code>lib/refresh.php</code> (<code>simulate_positions</code> — random
+      walk, clamped 1–100, later reused by M3); <code>lib/positions.php</code> (<code>position_seed</code> =
+      <code>INSERT OR IGNORE</code>); <code>keyword_count()</code>.</li>
+  <li>Idempotent by design: demo keywords inserted only when the table is empty; daily positions backfilled for
+      <em>every</em> keyword (last 30 days) with <code>INSERT OR IGNORE</code> — re-runs add nothing.</li>
+  <li>Tests: AI smoke test (fresh seed 8 keywords × 30 days = 240 rows, 30 distinct days, range 1–100, re-run adds 0)
+      <em>and</em> user manual checks — ran the script on a clean DB, inspected the data in DB Browser for SQLite,
+      re-ran the script (no duplicates added), and spot-checked a keyword's full history.</li>
+</ul>
+
 <h2>Prompts &amp; fixes</h2>
 <p>Three real prompts that mattered — including one that failed — and concrete AI
 mistakes, how they were caught, and the fix.</p>
@@ -166,7 +178,7 @@ proved it. Lesson: clean up between test runs and sanity-check the test itself.<
 
 <h2>Retrospective</h2>
 <p class="stub">What we'd do differently + total hours, updated each milestone.</p>
-<p>Hours spent so far: <strong>~1.5h</strong> (0.5h planning + 1h M1 build, testing, log).</p>
+<p>Hours spent so far: <strong>~2h</strong> (0.5h planning + 1h M1 + 0.5h M2).</p>
 
 </body>
 </html>

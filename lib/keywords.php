@@ -17,6 +17,11 @@ function keyword_find(PDO $pdo, int $id): ?array
     return $row === false ? null : $row;
 }
 
+function keyword_count(PDO $pdo): int
+{
+    return (int) $pdo->query('SELECT COUNT(*) FROM keywords')->fetchColumn();
+}
+
 function keyword_create(PDO $pdo, string $phrase): int
 {
     $stmt = $pdo->prepare('INSERT INTO keywords (phrase) VALUES (:phrase)');
