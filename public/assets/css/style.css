@@ -47,7 +47,8 @@ h1 {
     margin-bottom: 1rem;
 }
 
-input[type="text"] {
+input[type="text"],
+input[type="password"] {
     flex: 1;
     min-width: 0;
     padding: 0.5rem;
@@ -161,6 +162,20 @@ details.card summary {
     margin-top: 0.75rem;
 }
 
+.session {
+    margin-bottom: 1rem;
+}
+
+.card.auth {
+    flex-direction: column;
+    align-items: stretch;
+    max-width: 360px;
+}
+
+.card.auth h2 {
+    margin: 0 0 0.5rem;
+}
+
 .trend.improved {
     color: #0a7d0a;
 }
@@ -252,6 +267,7 @@ a.kw-link:hover {
     }
 
     .card input[type="text"],
+    .card input[type="password"],
     .search input[type="text"] {
         width: 100%;
     }

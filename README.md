@@ -11,11 +11,11 @@ docker compose up -d
 docker compose run --rm app php scripts/seed.php
 ```
 
-Then open http://localhost:8000 — you'll see the **Default** project with 8 demo
-keywords, each with 30 days of position history, current rank, and a 7-day trend.
-Click **Refresh positions** to generate today's ranks via AJAX (no page reload).
-Use **Switch project** to move between websites and **+ New project** to track
-another site (name + URL).
+Then open http://localhost:8000 — sign up (anyone can create an account) or sign
+in, and you'll see the **Default** project with 8 demo keywords, each with 30 days
+of position history, current rank, and a 7-day trend. Click **Refresh positions**
+to generate today's ranks via AJAX (no page reload). Use **Switch project** to
+move between websites and **+ New project** to track another site (name + URL).
 
 That's it. The SQLite file lives in `data/` (volume-mounted, gitignored), and
 the schema is created automatically on first request.
@@ -56,6 +56,9 @@ keyword in that project (last 30 days, ranks 1–100). Safe to re-run.
 - **S1** Line chart (hand-rolled SVG) of position history on the keyword detail page
 - **S2** Multiple projects/websites — each with its own keywords, history, search
   and refresh; per-project site URL; automatic migration for existing databases
+- **S3** Accounts + CSRF — open sign-up, sign in/out, session-based auth; every
+  POST (including the AJAX refresh) requires a per-session CSRF token; passwords
+  hashed with `password_hash()`
 
 ## Layout
 

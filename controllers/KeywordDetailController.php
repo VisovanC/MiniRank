@@ -15,6 +15,8 @@ final class KeywordDetailController
 
     public function handle(): void
     {
+        require_auth();
+
         $project = $this->resolveProject();
         $projectId = (int) $project['id'];
         $id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);

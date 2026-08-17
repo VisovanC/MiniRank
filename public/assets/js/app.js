@@ -1,4 +1,12 @@
 (function () {
+    document.querySelectorAll('form[data-confirm]').forEach(function (form) {
+        form.addEventListener('submit', function (event) {
+            if (!window.confirm(form.dataset.confirm)) {
+                event.preventDefault();
+            }
+        });
+    });
+
     const btn = document.getElementById('refresh-btn');
     const status = document.getElementById('refresh-status');
     if (!btn || !status) {
@@ -12,6 +20,10 @@
             const body = new URLSearchParams();
             if (btn.dataset.project) {
                 body.set('project', btn.dataset.project);
+            }
+            const csrf = document.querySelector('meta[name="csrf-token"]');
+            if (csrf) {
+                body.set('csrf', csrf.content);
             }
             const res = await fetch('refresh.php', {
                 method: 'POST',

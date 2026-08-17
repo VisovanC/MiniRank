@@ -270,6 +270,43 @@ controller can dispatch on <code>PATH_INFO</code> — <code>lib/</code> and the 
       names, seed idempotency, Docker end-to-end rebuild.</li>
 </ul>
 
+<h3>S3 — User accounts + CSRF <span style="font-weight:normal">(done)</span></h3>
+<ul>
+  <li><code>users</code> table (password via <code>password_hash</code>/<code>password_verify</code>) +
+      <code>lib/users.php</code>; <code>lib/csrf.php</code> for pure token generation/validation.</li>
+  <li>Sessions in the bootstrap choke point: cookie <code>httponly</code> + <code>SameSite=Lax</code>
+      (<code>secure</code> auto-on over HTTPS), id regenerated on login/register, CSRF token rotated on
+      privilege change. <code>require_auth()</code> / <code>current_user_id()</code> /
+      <code>csrf_field()</code> / <code>csrf_meta()</code> helpers live here too.</li>
+  <li>Open sign-up (<code>register.php</code>), sign in (<code>login.php</code>), log out
+      (<code>logout.php</code>, POST-only); login page links to sign-up and vice versa.</li>
+  <li>CSRF enforced globally in bootstrap on every POST (forms + the AJAX refresh via a
+      <code>&lt;meta&gt;</code> token); list + detail gated behind auth (redirect to login),
+      <code>refresh.php</code> returns 401 JSON when unauthenticated.</li>
+  <li>Security audit pass (AI + manual review) found and fixed:
+    <ul>
+      <li>Delete crashed with a 500 on a non-numeric <code>id</code> (TypeError under strict types) — normalize
+          <code>false</code> → <code>null</code> like the update path.</li>
+      <li>Login had no brute-force protection and leaked account existence via timing — added a per-user lockout
+          (5 failures → locked 5 min, SQL-side clock comparison) and a timing-safe <code>user_verify()</code>
+          (dummy hash for unknown usernames).</li>
+      <li>Session cookie lacked <code>secure</code>; data dir was <code>0777</code> — cookie now sets
+          <code>secure</code> when HTTPS, <code>mkdir</code> is <code>0755</code>.</li>
+      <li>No CSP — added <code>Content-Security-Policy: default-src 'self'</code> and moved the delete form's
+          inline <code>onsubmit</code> to a <code>data-confirm</code> attribute handled in <code>app.js</code>
+          (so no <code>'unsafe-inline'</code> needed).</li>
+    </ul>
+  </li>
+  <li>Audit confirmed clean: parameterized SQL everywhere, disciplined <code>e()</code> escaping (incl. SVG
+      chart), no open redirects, no path traversal, no command/header injection, no secrets tracked, project
+      scoping prevents cross-project keyword access (IDOR).</li>
+  <li>Known limitation (not a security issue): keyword phrases are globally unique, so the same phrase can't be
+      tracked in two projects. Relaxing to <code>UNIQUE(project_id, phrase)</code> requires a table rebuild.</li>
+  <li>Tests: full auth flows over HTTP (redirects, register/login/logout, wrong password, lockout, CSRF 403s,
+      refresh 401/200, invalid-id delete no longer 500), CSP/headers present, migration of existing DBs, fresh-DB
+      users + lockout functions, Docker end-to-end.</li>
+</ul>
+
 <h2>Prompts &amp; fixes</h2>
 <p>Three real prompts that mattered — including one that failed — and concrete AI
 mistakes, how they were caught, and the fix.</p>
@@ -316,7 +353,7 @@ treat new keywords the same way.</p>
 
 <h2>Retrospective</h2>
 <p class="stub">What we'd do differently + total hours, updated each milestone.</p>
-<p>Hours spent so far: <strong>~8h</strong> (M1–M8 ~5h + S1 0.5h + S1 bug fix 0.5h + S2 2h).</p>
+<p>Hours spent so far: <strong>~10.5h</strong> (M1–M8 ~5h + S1 0.5h + S1 bug fix 0.5h + S2 2h + S3 2.5h).</p>
 
 </body>
 </html>

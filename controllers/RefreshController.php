@@ -23,6 +23,12 @@ final class RefreshController
             return;
         }
 
+        if (current_user_id() === null) {
+            http_response_code(401);
+            echo json_encode(['ok' => false, 'error' => 'Not authenticated']);
+            return;
+        }
+
         $requested = filter_input(INPUT_POST, 'project', FILTER_VALIDATE_INT);
         $project = project_resolve(
             $this->pdo,

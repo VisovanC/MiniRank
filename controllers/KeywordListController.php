@@ -15,6 +15,8 @@ final class KeywordListController
 
     public function handle(): void
     {
+        require_auth();
+
         $project = $this->resolveProject();
         $projectId = (int) $project['id'];
 
@@ -46,7 +48,7 @@ final class KeywordListController
                 $editId = $postId !== false ? $postId : null;
                 $error = $this->update($projectId, $editId, $phrase);
             } elseif ($action === 'delete') {
-                $error = $this->delete($projectId, $postId);
+                $error = $this->delete($projectId, $postId !== false ? $postId : null);
             } else {
                 $error = 'Unknown action.';
             }
@@ -184,6 +186,7 @@ final class KeywordListController
             <meta name="viewport" content="width=device-width, initial-scale=1">
             <title>MiniRank — Keywords</title>
             <link rel="stylesheet" href="assets/css/style.css">
+            <?= csrf_meta() ?>
         </head>
         <body>
         <main>
@@ -194,6 +197,12 @@ final class KeywordListController
             </div>
             <p id="refresh-status" class="muted">
                 <?php if ($lastDate !== null): ?>Last refreshed: <?= e($lastDate) ?><?php endif; ?>
+            </p>
+            <p class="muted session">Signed in as <strong><?= e(current_username()) ?></strong>
+                <form method="post" action="logout.php" class="inline">
+                    <?= csrf_field() ?>
+                    <button type="submit" class="btn">Log out</button>
+                </form>
             </p>
 
             <nav class="projects">
@@ -208,6 +217,7 @@ final class KeywordListController
                 <summary>+ New project</summary>
                 <form method="post" action="index.php" class="project-form">
                     <input type="hidden" name="action" value="create_project">
+                    <?= csrf_field() ?>
                     <input type="text" name="name" placeholder="Project name" maxlength="100" required>
                     <input type="text" name="site_url" placeholder="https://site.example" maxlength="255" required>
                     <button type="submit">Create project</button>
@@ -223,6 +233,7 @@ final class KeywordListController
                     <input type="hidden" name="action" value="update">
                     <input type="hidden" name="id" value="<?= (int) $edit['id'] ?>">
                     <input type="hidden" name="project" value="<?= $projectId ?>">
+                    <?= csrf_field() ?>
                     <input type="text" name="phrase" value="<?= e($edit['phrase']) ?>" maxlength="255" required>
                     <button type="submit">Save</button>
                     <a class="btn" href="index.php?project=<?= $projectId ?>">Cancel</a>
@@ -231,6 +242,7 @@ final class KeywordListController
                 <form method="post" action="index.php" class="card">
                     <input type="hidden" name="action" value="create">
                     <input type="hidden" name="project" value="<?= $projectId ?>">
+                    <?= csrf_field() ?>
                     <input type="text" name="phrase" value="<?= e($draft) ?>" placeholder="New keyword phrase" maxlength="255" required>
                     <button type="submit">Add</button>
                 </form>
@@ -266,10 +278,11 @@ final class KeywordListController
                         <td class="right">
                             <a class="btn" href="index.php?project=<?= $projectId ?>&amp;edit=<?= (int) $k['id'] ?>">Edit</a>
                             <form method="post" action="index.php" class="inline"
-                                  onsubmit="return confirm('Delete this keyword and all its history?');">
+                                  data-confirm="Delete this keyword and all its history?">
                                 <input type="hidden" name="action" value="delete">
                                 <input type="hidden" name="id" value="<?= (int) $k['id'] ?>">
                                 <input type="hidden" name="project" value="<?= $projectId ?>">
+                                <?= csrf_field() ?>
                                 <button type="submit" class="btn btn-danger">Delete</button>
                             </form>
                         </td>

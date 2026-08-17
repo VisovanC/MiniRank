@@ -5,6 +5,15 @@ CREATE TABLE IF NOT EXISTS projects (
   created_at TEXT    NOT NULL DEFAULT (datetime('now'))
 );
 
+CREATE TABLE IF NOT EXISTS users (
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  username        TEXT    NOT NULL UNIQUE,
+  password_hash   TEXT    NOT NULL,
+  failed_attempts INTEGER NOT NULL DEFAULT 0,
+  locked_until    TEXT,
+  created_at      TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS keywords (
   id         INTEGER PRIMARY KEY AUTOINCREMENT,
   phrase     TEXT    NOT NULL UNIQUE,
