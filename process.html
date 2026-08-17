@@ -209,6 +209,19 @@ controller can dispatch on <code>PATH_INFO</code> — <code>lib/</code> and the 
       <code>display_errors=off</code> so stack traces never leak — left on for this assessment.</li>
 </ul>
 
+<h3>M7 — Runs in 5 minutes <span style="font-weight:normal">(done)</span></h3>
+<ul>
+  <li>README rewritten around a 5-minute quick start: <code>docker compose up -d</code> +
+      <code>docker compose run --rm app php scripts/seed.php</code> → http://localhost:8000.</li>
+  <li>Verified the Docker path end-to-end for the first time (daemon was down in earlier milestones): image builds
+      (<code>php:8.2-cli-alpine</code>, <code>pdo_sqlite</code> compiled in), app serves, refresh endpoint returns
+      JSON, seed is idempotent ("0 new" on re-run).</li>
+  <li>Fresh-clone flow proven with an isolated named volume: first request auto-creates the schema, seed adds
+      8 keywords / 240 rows, list renders. One-command start + seed is genuinely all that's needed.</li>
+  <li>Note: the host <code>data/</code> directory couldn't be renamed for an in-place fresh test (Windows file lock
+      on the bind mount), so the fresh flow was validated against an empty volume instead — equivalent result.</li>
+</ul>
+
 <h2>Prompts &amp; fixes</h2>
 <p>Four real prompts that mattered — including two that failed — and concrete AI
 mistakes, how they were caught, and the fix.</p>
@@ -272,7 +285,7 @@ change — a hidden server-side success is not a visible result.</p>
 
 <h2>Retrospective</h2>
 <p class="stub">What we'd do differently + total hours, updated each milestone.</p>
-<p>Hours spent so far: <strong>~4h</strong> (0.5h planning + 1h M1 + 0.5h M2 + 0.5h M3 + 0.5h M4 + 0.5h M5 + refresh fix + 0.5h M6).</p>
+<p>Hours spent so far: <strong>~4.5h</strong> (0.5h planning + 1h M1 + 0.5h M2 + 0.5h M3 + 0.5h M4 + 0.5h M5 + refresh fix + 0.5h M6 + 0.5h M7).</p>
 
 </body>
 </html>
