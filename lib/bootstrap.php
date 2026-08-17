@@ -12,6 +12,9 @@ require_once __DIR__ . '/refresh.php';
 require_once __DIR__ . '/trend.php';
 require_once __DIR__ . '/escape.php';
 
+header('X-Content-Type-Options: nosniff');
+header('X-Frame-Options: SAMEORIGIN');
+
 $dataDir = dirname($config['db']['path']);
 if (!is_dir($dataDir)) {
     mkdir($dataDir, 0777, true);
