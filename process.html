@@ -347,6 +347,26 @@ controller can dispatch on <code>PATH_INFO</code> — <code>lib/</code> and the 
       regression after the refactor, lint, Docker end-to-end.</li>
 </ul>
 
+<h3>S6 — Unit tests for the pure lib/ layer <span style="font-weight:normal">(done)</span></h3>
+<ul>
+  <li>Dependency-free runner (<code>tests/run.php</code>) matching the app's no-framework ethos: <code>ok()</code>/
+      <code>eq()</code> helpers + a <code>memory_pdo()</code> that boots the real schema.sql on an in-memory SQLite;
+      discovers <code>tests/*_test.php</code>, counts assertions, exits non-zero on any failure (so it can gate CI or
+      a pre-commit check).</li>
+  <li>Pure-logic suites: <code>trend_test.php</code> (latest position, 7-day trend, labels, <code>normalize_filters()</code>
+      incl. clamping + range-swap, <code>filter_rows()</code> incl. no-position handling), <code>chart_test.php</code>
+      (SVG output, rank-1-above-rank-100, flat-data padding, empty/single-point), <code>csv_test.php</code> (quoting),
+      <code>escape_test.php</code>, <code>csrf_test.php</code>.</li>
+  <li>DB suites against fresh in-memory schemas: <code>db_test.php</code> (project/keyword/position CRUD + project
+      scoping, LIKE-escape correctness, upsert/idempotent seed, refresh, deterministic <code>simulate_positions()</code>),
+      <code>users_test.php</code> (password verify, lockout after 5 failures, reset), <code>schema_test.php</code>
+      (builds a legacy DB by hand and checks the migration adds <code>project_id</code>/lockout columns + Default
+      project, and is idempotent).</li>
+  <li>80 assertions across 8 files, ~0.3s; two initially-failing assertions were bugs in my test expectations (wrong
+      expected LIKE-escape value, and expecting <code>user_verify()</code> to enforce the lock when that lives in the
+      controller) — the code itself was correct, which is the test suite doing its job.</li>
+</ul>
+
 <h2>Prompts &amp; fixes</h2>
 <p>Three real prompts that mattered — including one that failed — and concrete AI
 mistakes, how they were caught, and the fix.</p>
@@ -393,7 +413,7 @@ treat new keywords the same way.</p>
 
 <h2>Retrospective</h2>
 <p class="stub">What we'd do differently + total hours, updated each milestone.</p>
-<p>Hours spent so far: <strong>~13h</strong> (M1–M8 ~5h + S1 0.5h + S1 bug fix 0.5h + S2 2h + S3 2.5h + S4 1h + S5 1.5h).</p>
+<p>Hours spent so far: <strong>~14.5h</strong> (M1–M8 ~5h + S1 0.5h + S1 bug fix 0.5h + S2 2h + S3 2.5h + S4 1h + S5 1.5h + S6 1.5h).</p>
 
 </body>
 </html>

@@ -63,6 +63,10 @@ keyword in that project (last 30 days, ranks 1–100). Safe to re-run.
   by rank range (min–max), combined with each other and with search
 - **S5** CSV export — download the current (search- and filter-aware) keyword list
   or a keyword's position history; UTF-8 BOM + proper quoting for Excel
+- **S6** Unit tests for the pure `lib/` functions — dependency-free runner
+  (`php tests/run.php`): trend/filter logic, chart SVG, CSV encoding, escaping,
+  CSRF tokens, user auth + lockout, project/keyword/position CRUD on in-memory
+  SQLite, and the legacy-schema migration
 
 ## Layout
 
