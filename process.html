@@ -158,7 +158,7 @@ controller can dispatch on <code>PATH_INFO</code> — <code>lib/</code> and the 
       <em>and</em> user browser test of the button.</li>
   <li>Incident: user saw the old page (no button, app.js 404) and suspected the template wasn't saved. Root cause:
       Docker bakes code in at image build time (<code>COPY . /app</code>) — the running container served a stale image.
-      Fix: <code>docker compose up -d --build</code>. Lesson recorded in the failed-prompt slot below.</li>
+      Fix: <code>docker compose up -d --build</code>.</li>
 </ul>
 
 <h3>M4 — Keyword list <span style="font-weight:normal">(done)</span></h3>
@@ -179,7 +179,7 @@ controller can dispatch on <code>PATH_INFO</code> — <code>lib/</code> and the 
       <code>public/keyword.php</code> (<code>?id=</code>, 404 on missing/invalid id); keyword phrases on the list now
       link to the detail page.</li>
   <li>Detail page: current position + record count + full history table (newest first).</li>
-  <li>Bug found &amp; fixed during user review (logged in the failed-prompt slot): the Refresh button updated only the
+  <li>Bug found &amp; fixed during user review: the Refresh button updated only the
       status line, not the table. Fix: <code>refresh.php</code> returns the updated rows in JSON, <code>app.js</code>
       rewrites the cells in place; row metrics shared via <code>keyword_rows_with_metrics()</code> +
       <code>trend_label()</code> in <code>lib/trend.php</code>.</li>
@@ -242,13 +242,36 @@ controller can dispatch on <code>PATH_INFO</code> — <code>lib/</code> and the 
   <li>Edge cases handled: no history → message; single point → point only (no polyline); flat data → range padded ±1.</li>
   <li>Bug caught during dev: the y-mapping initially put the worst rank at the top — caught by reading the test output
       (position 1 must be top), fixed the formula, re-verified.</li>
-  <li>Bug found by user review (logged in slot 5): a keyword added via the UI had no history and no trend — the first
+  <li>Bug found by user review: a keyword added via the UI had no history and no trend — the first
       refresh only added today's row. Fixed by extracting <code>seed_keyword_history()</code> into <code>lib/seed.php</code>
       and backfilling 30 days on create; <code>scripts/seed.php</code> now reuses the same function.</li>
 </ul>
 
+<h3>S2 — Multiple projects/websites <span style="font-weight:normal">(done)</span></h3>
+<ul>
+  <li>New <code>projects</code> table (name, per-project site URL) + <code>keywords.project_id</code>;
+      new <code>lib/projects.php</code> (<code>project_list</code>, <code>project_find</code>,
+      <code>project_resolve</code>, <code>project_create</code>).</li>
+  <li>Migration for existing DBs (schema.sql is <code>CREATE IF NOT EXISTS</code>): on first request,
+      <code>ALTER TABLE keywords ADD COLUMN project_id</code> + auto-create the "Default" project; existing
+      keywords are reassigned to it. Fresh DBs get <code>project_id NOT NULL</code> directly from schema.sql.</li>
+  <li>List page: project switcher, "+ New project" form (name + site URL), heading shows project name + URL.
+      All keyword CRUD, search, refresh, and the detail page are scoped to the current project; the detail page
+      404s when a keyword belongs to another project. Refresh POST carries the project id
+      (<code>app.js</code> reads <code>data-project</code> on the button).</li>
+  <li>Bug caught during dev: POST forms sent <code>project</code> in the body while project resolution only read
+      GET — keywords silently created in the Default project. Fixed by resolving from GET, falling back to POST.</li>
+  <li>Bug caught during dev: <code>INSERT OR IGNORE</code> for the Default project burned an AUTOINCREMENT id on every
+      request (project ids jumped into the 20s). Fixed with a guarded insert (check-then-insert) and a plain
+      <code>INTEGER PRIMARY KEY</code> in schema.sql; also added <code>PRAGMA busy_timeout</code> to
+      <code>app_pdo()</code> to avoid transient "database is locked" on writes.</li>
+  <li>Tests: migration on the real DB (9 existing keywords → Default), fresh-DB path (schema + auto Default),
+      project isolation (create/search/edit/delete/refresh/detail each stay in-project), XSS escaping of project
+      names, seed idempotency, Docker end-to-end rebuild.</li>
+</ul>
+
 <h2>Prompts &amp; fixes</h2>
-<p>Five real prompts that mattered — including two that failed — and concrete AI
+<p>Three real prompts that mattered — including one that failed — and concrete AI
 mistakes, how they were caught, and the fix.</p>
 <h3>1. The foundation prompt (the most relevant one)</h3>
 <p><em>Prompt:</em> "I'm building a keyword-position-tracker web app for an
@@ -275,39 +298,7 @@ error testing, and only then do we log + commit.</p>
 mismatched grep pattern during smoke testing made an edit-form check look like it
 failed. The app was fine; re-running with the correct pattern against a clean DB
 proved it. Lesson: clean up between test runs and sanity-check the test itself.</p>
-<h3>3. The one that failed — the M3 stale-page report</h3>
-<p><em>Prompt:</em> "index.php doesn't render the refresh button or 'Last refreshed'
-line, and app.js never loads per the Network tab… did the index.php template
-actually get updated, or did that change not get applied/saved?"</p>
-<p><em>What happened:</em> the change <em>was</em> saved and worked locally, but the
-user's Docker container kept serving the previous page. The AI's mistake: when the
-project chose Docker as the run target, the AI didn't flag that code is baked into
-the image at build time — so after every code change the user must rebuild
-(<code>docker compose up -d --build</code>), not just re-run compose.</p>
-<p><em>How it was caught:</em> the user's Network tab showed <code>app.js</code> 404 —
-impossible if the working tree were being served (the file is on disk and serves
-HTTP 200 locally), which pointed at a stale image rather than unsaved code.</p>
-<p><em>Fix:</em> documented rebuild workflow; future milestones will state it
-explicitly in the commit note.</p>
-<h3>4. The one that failed — the M5 refresh button</h3>
-<p><em>Prompt:</em> "if i press the refresh positions button, nothing happens unless
-i refresh the web page as well"</p>
-<p><em>What went wrong:</em> the AJAX handler updated only the one-line status text.
-The Position/Trend cells in the table are server-rendered HTML and nothing in
-<code>app.js</code> touched them — so clicking Refresh silently changed the database
-but left the visible table stale until a full page reload. The fetch itself was never
-broken (a reload showed the new numbers), which made the bug easy to misread as
-"nothing happened".</p>
-<p><em>How it was caught:</em> the user pressed the button, saw no change, reloaded,
-and the positions were different — proof the server updated but the DOM didn't.</p>
-<p><em>Fix:</em> <code>refresh.php</code> now returns the refreshed rows
-(<code>id</code>, <code>position</code>, <code>trend</code>, <code>trend_label</code>)
-in the JSON; <code>app.js</code> rewrites each row's cells via
-<code>data-keyword-id</code>; and the row-metrics logic is shared with the list page
-(<code>keyword_rows_with_metrics()</code>) so the table and the endpoint always agree.
-Lesson: when an AJAX action "does nothing", check what the DOM is actually supposed to
-change — a hidden server-side success is not a visible result.</p>
-<h3>5. The S1-followup bug — new keywords had no history</h3>
+<h3>3. The one that failed — the S1-followup bug</h3>
 <p><em>Prompt:</em> "if i add a keyword other than the ones from the seeded history,
 it has no trend and holds no records except for today."</p>
 <p><em>What went wrong:</em> creating a keyword inserted only the <code>keywords</code>
@@ -325,7 +316,7 @@ treat new keywords the same way.</p>
 
 <h2>Retrospective</h2>
 <p class="stub">What we'd do differently + total hours, updated each milestone.</p>
-<p>Hours spent so far: <strong>~6h</strong> (M1–M8 ~5h + S1 0.5h + S1 bug fix 0.5h).</p>
+<p>Hours spent so far: <strong>~8h</strong> (M1–M8 ~5h + S1 0.5h + S1 bug fix 0.5h + S2 2h).</p>
 
 </body>
 </html>

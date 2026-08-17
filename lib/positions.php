@@ -30,17 +30,29 @@ function position_before(PDO $pdo, int $keywordId, string $date): ?int
     return $value === false ? null : (int) $value;
 }
 
-function position_last_date(PDO $pdo): ?string
+function position_last_date(PDO $pdo, int $projectId): ?string
 {
-    $value = $pdo->query('SELECT MAX(date) FROM positions')->fetchColumn();
+    $stmt = $pdo->prepare(
+        'SELECT MAX(p.date) FROM positions p
+         JOIN keywords k ON k.id = p.keyword_id
+         WHERE k.project_id = :project_id'
+    );
+    $stmt->execute(['project_id' => $projectId]);
+    $value = $stmt->fetchColumn();
     return $value === false || $value === null ? null : (string) $value;
 }
 
-function all_keyword_histories(PDO $pdo): array
+function all_keyword_histories(PDO $pdo, int $projectId): array
 {
-    $rows = $pdo
-        ->query('SELECT keyword_id, date, position FROM positions ORDER BY keyword_id, date ASC, id ASC')
-        ->fetchAll();
+    $stmt = $pdo->prepare(
+        'SELECT p.keyword_id, p.date, p.position
+         FROM positions p
+         JOIN keywords k ON k.id = p.keyword_id
+         WHERE k.project_id = :project_id
+         ORDER BY p.keyword_id, p.date ASC, p.id ASC'
+    );
+    $stmt->execute(['project_id' => $projectId]);
+    $rows = $stmt->fetchAll();
     $histories = [];
     foreach ($rows as $row) {
         $histories[(int) $row['keyword_id']][] = [

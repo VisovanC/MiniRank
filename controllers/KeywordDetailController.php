@@ -15,19 +15,31 @@ final class KeywordDetailController
 
     public function handle(): void
     {
+        $project = $this->resolveProject();
+        $projectId = (int) $project['id'];
         $id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
-        $keyword = ($id !== null && $id !== false) ? keyword_find($this->pdo, $id) : null;
+        $keyword = ($id !== null && $id !== false) ? keyword_find($this->pdo, $id, $projectId) : null;
 
         if ($keyword === null) {
             http_response_code(404);
         }
 
-        $this->render($keyword);
+        $this->render($project, $keyword);
     }
 
-    private function render(?array $keyword): void
+    private function resolveProject(): array
     {
-        $siteUrl = e($this->config['site']['url']);
+        $requested = filter_input(INPUT_GET, 'project', FILTER_VALIDATE_INT);
+        return project_resolve(
+            $this->pdo,
+            $this->config,
+            $requested !== null && $requested !== false ? $requested : null
+        );
+    }
+
+    private function render(array $project, ?array $keyword): void
+    {
+        $projectId = (int) $project['id'];
         ?>
         <!DOCTYPE html>
         <html lang="en">
@@ -40,8 +52,8 @@ final class KeywordDetailController
         <body>
         <main>
             <h1>MiniRank</h1>
-            <p class="muted">Tracking positions for <?= $siteUrl ?></p>
-            <p><a class="btn" href="index.php">&larr; Back to keywords</a></p>
+            <p class="muted">Project: <strong><?= e($project['name']) ?></strong> — tracking positions for <?= e($project['site_url']) ?></p>
+            <p><a class="btn" href="index.php?project=<?= $projectId ?>">&larr; Back to keywords</a></p>
 
             <?php if ($keyword === null): ?>
                 <p class="error">Keyword not found.</p>

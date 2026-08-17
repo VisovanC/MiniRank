@@ -15,14 +15,17 @@ $demoKeywords = [
     'meta title checker',
 ];
 
-if (keyword_count($pdo) === 0) {
+$project = project_resolve($pdo, $config, null);
+$projectId = (int) $project['id'];
+
+if (keyword_count($pdo, $projectId) === 0) {
     foreach ($demoKeywords as $phrase) {
-        keyword_create($pdo, $phrase);
+        keyword_create($pdo, $projectId, $phrase);
     }
 }
 
 $days = 30;
-$keywords = keyword_list($pdo);
+$keywords = keyword_list($pdo, $projectId);
 $inserted = 0;
 
 foreach ($keywords as $keyword) {
@@ -30,8 +33,10 @@ foreach ($keywords as $keyword) {
 }
 
 echo sprintf(
-    "Seeded %d keywords, %d new daily positions (last %d days).\n",
+    "Seeded %d keywords in project %d (%s), %d new daily positions (last %d days).\n",
     count($keywords),
+    $projectId,
+    $project['name'],
     $inserted,
     $days
 );

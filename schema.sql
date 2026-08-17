@@ -1,6 +1,14 @@
+CREATE TABLE IF NOT EXISTS projects (
+  id         INTEGER PRIMARY KEY,
+  name       TEXT    NOT NULL UNIQUE,
+  site_url   TEXT    NOT NULL,
+  created_at TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS keywords (
   id         INTEGER PRIMARY KEY AUTOINCREMENT,
   phrase     TEXT    NOT NULL UNIQUE,
+  project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
   created_at TEXT    NOT NULL DEFAULT (datetime('now'))
 );
 

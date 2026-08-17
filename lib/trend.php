@@ -51,10 +51,10 @@ function trend_label(?string $trend): string
     };
 }
 
-function keyword_rows_with_metrics(PDO $pdo, string $search = ''): array
+function keyword_rows_with_metrics(PDO $pdo, int $projectId, string $search = ''): array
 {
-    $keywords = keyword_list($pdo, $search);
-    $histories = all_keyword_histories($pdo);
+    $keywords = keyword_list($pdo, $projectId, $search);
+    $histories = all_keyword_histories($pdo, $projectId);
     $rows = [];
     foreach ($keywords as $k) {
         $history = $histories[(int) $k['id']] ?? [];

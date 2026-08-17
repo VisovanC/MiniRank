@@ -9,9 +9,17 @@
         btn.disabled = true;
         btn.textContent = 'Refreshing…';
         try {
+            const body = new URLSearchParams();
+            if (btn.dataset.project) {
+                body.set('project', btn.dataset.project);
+            }
             const res = await fetch('refresh.php', {
                 method: 'POST',
-                headers: { 'Accept': 'application/json' }
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+                },
+                body: body
             });
             if (!res.ok) {
                 throw new Error('HTTP ' + res.status);

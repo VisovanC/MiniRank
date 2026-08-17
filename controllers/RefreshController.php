@@ -5,10 +5,12 @@ declare(strict_types=1);
 final class RefreshController
 {
     private PDO $pdo;
+    private array $config;
 
-    public function __construct(PDO $pdo)
+    public function __construct(PDO $pdo, array $config)
     {
         $this->pdo = $pdo;
+        $this->config = $config;
     }
 
     public function handle(): void
@@ -21,10 +23,18 @@ final class RefreshController
             return;
         }
 
-        $result = refresh_today($this->pdo, static fn(): float => mt_rand() / mt_getrandmax());
+        $requested = filter_input(INPUT_POST, 'project', FILTER_VALIDATE_INT);
+        $project = project_resolve(
+            $this->pdo,
+            $this->config,
+            $requested !== null && $requested !== false ? $requested : null
+        );
+        $projectId = (int) $project['id'];
+
+        $result = refresh_today($this->pdo, $projectId, static fn(): float => mt_rand() / mt_getrandmax());
 
         $rows = [];
-        foreach (keyword_rows_with_metrics($this->pdo) as $row) {
+        foreach (keyword_rows_with_metrics($this->pdo, $projectId) as $row) {
             $rows[] = [
                 'id' => $row['id'],
                 'position' => $row['position'],

@@ -1,7 +1,8 @@
 # MiniRank
 
 Keyword position tracker — plain PHP 8 (no framework), PDO + SQLite, vanilla
-HTML/CSS/JS. Single user, single website.
+HTML/CSS/JS. Single user, multiple websites (projects), each with its own
+keywords and position history.
 
 ## Quick start (5 minutes, Docker)
 
@@ -10,9 +11,11 @@ docker compose up -d
 docker compose run --rm app php scripts/seed.php
 ```
 
-Then open http://localhost:8000 — you'll see 8 demo keywords, each with 30 days
-of position history, current rank, and a 7-day trend. Click **Refresh positions**
-to generate today's ranks via AJAX (no page reload).
+Then open http://localhost:8000 — you'll see the **Default** project with 8 demo
+keywords, each with 30 days of position history, current rank, and a 7-day trend.
+Click **Refresh positions** to generate today's ranks via AJAX (no page reload).
+Use **Switch project** to move between websites and **+ New project** to track
+another site (name + URL).
 
 That's it. The SQLite file lives in `data/` (volume-mounted, gitignored), and
 the schema is created automatically on first request.
@@ -34,8 +37,8 @@ docker compose run --rm app php scripts/seed.php
 ```
 
 Locally: `php scripts/seed.php`. Idempotent — inserts the demo keywords only if
-none exist, then fills in any missing daily positions for every keyword (last 30
-days, ranks 1–100). Safe to re-run.
+the Default project has none, then fills in any missing daily positions for every
+keyword in that project (last 30 days, ranks 1–100). Safe to re-run.
 
 ## What it does
 
@@ -51,6 +54,8 @@ days, ranks 1–100). Safe to re-run.
 - **M7** This README — one-command start + seed
 - **M8** Responsive layout (usable at phone width)
 - **S1** Line chart (hand-rolled SVG) of position history on the keyword detail page
+- **S2** Multiple projects/websites — each with its own keywords, history, search
+  and refresh; per-project site URL; automatic migration for existing databases
 
 ## Layout
 

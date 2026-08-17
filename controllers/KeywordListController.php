@@ -15,7 +15,11 @@ final class KeywordListController
 
     public function handle(): void
     {
+        $project = $this->resolveProject();
+        $projectId = (int) $project['id'];
+
         $error = '';
+        $showProjectForm = false;
         $draft = '';
         $editId = null;
         $edit = null;
@@ -27,20 +31,28 @@ final class KeywordListController
             $phrase = trim((string) ($_POST['phrase'] ?? ''));
             $postId = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
 
-            if ($action === 'create') {
+            if ($action === 'create_project') {
+                $showProjectForm = true;
+                $result = $this->createProject();
+                $error = $result['error'];
+                if ($error === '') {
+                    header('Location: index.php?project=' . (int) $result['project_id']);
+                    exit;
+                }
+            } elseif ($action === 'create') {
                 $draft = $phrase;
-                $error = $this->create($phrase);
+                $error = $this->create($projectId, $phrase);
             } elseif ($action === 'update') {
                 $editId = $postId !== false ? $postId : null;
-                $error = $this->update($editId, $phrase);
+                $error = $this->update($projectId, $editId, $phrase);
             } elseif ($action === 'delete') {
-                $error = $this->delete($postId);
+                $error = $this->delete($projectId, $postId);
             } else {
                 $error = 'Unknown action.';
             }
 
             if ($error === '') {
-                header('Location: index.php');
+                header('Location: index.php?project=' . $projectId);
                 exit;
             }
         }
@@ -49,7 +61,7 @@ final class KeywordListController
             $editId = filter_input(INPUT_GET, 'edit', FILTER_VALIDATE_INT);
         }
         if ($editId !== null && $editId !== false) {
-            $edit = keyword_find($this->pdo, $editId);
+            $edit = keyword_find($this->pdo, $editId, $projectId);
             if ($edit !== null && $error !== '') {
                 $edit['phrase'] = $phrase;
             }
@@ -58,10 +70,47 @@ final class KeywordListController
             }
         }
 
-        $this->render($error, $edit, $draft, $search);
+        $this->render($project, $error, $showProjectForm, $edit, $draft, $search);
     }
 
-    private function create(string $phrase): string
+    private function resolveProject(): array
+    {
+        $requested = filter_input(INPUT_GET, 'project', FILTER_VALIDATE_INT);
+        if ($requested === null || $requested === false) {
+            $requested = filter_input(INPUT_POST, 'project', FILTER_VALIDATE_INT);
+        }
+        return project_resolve(
+            $this->pdo,
+            $this->config,
+            $requested !== null && $requested !== false ? $requested : null
+        );
+    }
+
+    private function createProject(): array
+    {
+        $name = trim((string) ($_POST['name'] ?? ''));
+        $siteUrl = trim((string) ($_POST['site_url'] ?? ''));
+        if ($name === '' || $siteUrl === '') {
+            return ['error' => 'Project name and site URL are required.', 'project_id' => null];
+        }
+        if (strlen($name) > 100) {
+            return ['error' => 'Project name must be 100 characters or fewer.', 'project_id' => null];
+        }
+        if (strlen($siteUrl) > 255) {
+            return ['error' => 'Site URL must be 255 characters or fewer.', 'project_id' => null];
+        }
+        try {
+            $id = project_create($this->pdo, $name, $siteUrl);
+            return ['error' => '', 'project_id' => $id];
+        } catch (PDOException $e) {
+            if (str_starts_with((string) $e->getCode(), '23')) {
+                return ['error' => 'A project with that name already exists.', 'project_id' => null];
+            }
+            throw $e;
+        }
+    }
+
+    private function create(int $projectId, string $phrase): string
     {
         if ($phrase === '') {
             return 'Phrase is required.';
@@ -70,7 +119,7 @@ final class KeywordListController
             return 'Phrase must be 255 characters or fewer.';
         }
         try {
-            $id = keyword_create($this->pdo, $phrase);
+            $id = keyword_create($this->pdo, $projectId, $phrase);
             seed_keyword_history($this->pdo, $id);
         } catch (PDOException $e) {
             if (str_starts_with((string) $e->getCode(), '23')) {
@@ -81,12 +130,12 @@ final class KeywordListController
         return '';
     }
 
-    private function update(?int $id, string $phrase): string
+    private function update(int $projectId, ?int $id, string $phrase): string
     {
         if ($id === null) {
             return 'Invalid keyword.';
         }
-        if (keyword_find($this->pdo, $id) === null) {
+        if (keyword_find($this->pdo, $id, $projectId) === null) {
             return 'Keyword not found.';
         }
         if ($phrase === '') {
@@ -96,7 +145,7 @@ final class KeywordListController
             return 'Phrase must be 255 characters or fewer.';
         }
         try {
-            keyword_update($this->pdo, $id, $phrase);
+            keyword_update($this->pdo, $id, $projectId, $phrase);
         } catch (PDOException $e) {
             if (str_starts_with((string) $e->getCode(), '23')) {
                 return 'A keyword with that phrase already exists.';
@@ -106,20 +155,27 @@ final class KeywordListController
         return '';
     }
 
-    private function delete(?int $id): string
+    private function delete(int $projectId, ?int $id): string
     {
         if ($id === null) {
             return 'Invalid keyword.';
         }
-        keyword_delete($this->pdo, $id);
+        keyword_delete($this->pdo, $id, $projectId);
         return '';
     }
 
-    private function render(string $error, ?array $edit, string $draft, string $search): void
-    {
-        $rows = keyword_rows_with_metrics($this->pdo, $search);
-        $siteUrl = e($this->config['site']['url']);
-        $lastDate = position_last_date($this->pdo);
+    private function render(
+        array $project,
+        string $error,
+        bool $showProjectForm,
+        ?array $edit,
+        string $draft,
+        string $search
+    ): void {
+        $projectId = (int) $project['id'];
+        $projects = project_list($this->pdo);
+        $rows = keyword_rows_with_metrics($this->pdo, $projectId, $search);
+        $lastDate = position_last_date($this->pdo, $projectId);
         ?>
         <!DOCTYPE html>
         <html lang="en">
@@ -133,12 +189,30 @@ final class KeywordListController
         <main>
             <h1>MiniRank</h1>
             <div class="toolbar">
-                <p class="muted">Tracking positions for <?= $siteUrl ?></p>
-                <button type="button" id="refresh-btn" class="btn">Refresh positions</button>
+                <p class="muted">Project: <strong><?= e($project['name']) ?></strong> — tracking positions for <?= e($project['site_url']) ?></p>
+                <button type="button" id="refresh-btn" class="btn" data-project="<?= $projectId ?>">Refresh positions</button>
             </div>
             <p id="refresh-status" class="muted">
                 <?php if ($lastDate !== null): ?>Last refreshed: <?= e($lastDate) ?><?php endif; ?>
             </p>
+
+            <nav class="projects">
+                <span class="muted">Switch project:</span>
+                <?php foreach ($projects as $p): ?>
+                    <a class="btn project-link<?= (int) $p['id'] === $projectId ? ' active' : '' ?>"
+                       href="index.php?project=<?= (int) $p['id'] ?>"><?= e($p['name']) ?></a>
+                <?php endforeach; ?>
+            </nav>
+
+            <details class="card"<?= $showProjectForm ? ' open' : '' ?>>
+                <summary>+ New project</summary>
+                <form method="post" action="index.php" class="project-form">
+                    <input type="hidden" name="action" value="create_project">
+                    <input type="text" name="name" placeholder="Project name" maxlength="100" required>
+                    <input type="text" name="site_url" placeholder="https://site.example" maxlength="255" required>
+                    <button type="submit">Create project</button>
+                </form>
+            </details>
 
             <?php if ($error !== ''): ?>
                 <p class="error"><?= e($error) ?></p>
@@ -148,23 +222,26 @@ final class KeywordListController
                 <form method="post" action="index.php" class="card">
                     <input type="hidden" name="action" value="update">
                     <input type="hidden" name="id" value="<?= (int) $edit['id'] ?>">
+                    <input type="hidden" name="project" value="<?= $projectId ?>">
                     <input type="text" name="phrase" value="<?= e($edit['phrase']) ?>" maxlength="255" required>
                     <button type="submit">Save</button>
-                    <a class="btn" href="index.php">Cancel</a>
+                    <a class="btn" href="index.php?project=<?= $projectId ?>">Cancel</a>
                 </form>
             <?php else: ?>
                 <form method="post" action="index.php" class="card">
                     <input type="hidden" name="action" value="create">
+                    <input type="hidden" name="project" value="<?= $projectId ?>">
                     <input type="text" name="phrase" value="<?= e($draft) ?>" placeholder="New keyword phrase" maxlength="255" required>
                     <button type="submit">Add</button>
                 </form>
             <?php endif; ?>
 
             <form method="get" action="index.php" class="search">
+                <input type="hidden" name="project" value="<?= $projectId ?>">
                 <input type="text" name="search" value="<?= e($search) ?>" placeholder="Search keywords…">
                 <button type="submit" class="btn">Search</button>
                 <?php if ($search !== ''): ?>
-                    <a class="btn" href="index.php">Clear</a>
+                    <a class="btn" href="index.php?project=<?= $projectId ?>">Clear</a>
                 <?php endif; ?>
             </form>
 
@@ -182,16 +259,17 @@ final class KeywordListController
                 <tbody>
                 <?php foreach ($rows as $k): ?>
                     <tr data-keyword-id="<?= (int) $k['id'] ?>">
-                        <td><a class="kw-link" href="keyword.php?id=<?= (int) $k['id'] ?>"><?= e($k['phrase']) ?></a></td>
+                        <td><a class="kw-link" href="keyword.php?id=<?= (int) $k['id'] ?>&amp;project=<?= $projectId ?>"><?= e($k['phrase']) ?></a></td>
                         <td class="pos"><?= $k['position'] !== null ? (int) $k['position'] : '—' ?></td>
                         <td class="trend <?= e($k['trend'] ?? '') ?>"><?= trend_label($k['trend']) ?></td>
                         <td class="col-added"><?= e($k['created_at']) ?></td>
                         <td class="right">
-                            <a class="btn" href="index.php?edit=<?= (int) $k['id'] ?>">Edit</a>
+                            <a class="btn" href="index.php?project=<?= $projectId ?>&amp;edit=<?= (int) $k['id'] ?>">Edit</a>
                             <form method="post" action="index.php" class="inline"
                                   onsubmit="return confirm('Delete this keyword and all its history?');">
                                 <input type="hidden" name="action" value="delete">
                                 <input type="hidden" name="id" value="<?= (int) $k['id'] ?>">
+                                <input type="hidden" name="project" value="<?= $projectId ?>">
                                 <button type="submit" class="btn btn-danger">Delete</button>
                             </form>
                         </td>

@@ -14,11 +14,11 @@ function simulate_positions(int $days, callable $rand): array
     return $positions;
 }
 
-function refresh_today(PDO $pdo, callable $rand): array
+function refresh_today(PDO $pdo, int $projectId, callable $rand): array
 {
     $date = date('Y-m-d');
     $count = 0;
-    foreach (keyword_list($pdo) as $keyword) {
+    foreach (keyword_list($pdo, $projectId) as $keyword) {
         $previous = position_before($pdo, (int) $keyword['id'], $date);
         if ($previous === null) {
             $next = 1 + (int) floor($rand() * 100);

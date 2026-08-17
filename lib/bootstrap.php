@@ -6,6 +6,7 @@ $config = require __DIR__ . '/../config/config.php';
 
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/schema.php';
+require_once __DIR__ . '/projects.php';
 require_once __DIR__ . '/keywords.php';
 require_once __DIR__ . '/positions.php';
 require_once __DIR__ . '/refresh.php';
@@ -23,4 +24,4 @@ if (!is_dir($dataDir)) {
 }
 
 $pdo = app_pdo($config);
-app_schema_init($pdo, __DIR__ . '/../schema.sql');
+app_schema_init($pdo, __DIR__ . '/../schema.sql', $config);
