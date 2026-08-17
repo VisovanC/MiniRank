@@ -231,6 +231,19 @@ controller can dispatch on <code>PATH_INFO</code> — <code>lib/</code> and the 
       confirmation by the user.</li>
 </ul>
 
+<h2>Stretch goals</h2>
+
+<h3>S1 — Line chart on detail page <span style="font-weight:normal">(done)</span></h3>
+<ul>
+  <li>Hand-rolled SVG (no CDN/library) — keeps the app dependency-free and offline-safe in Docker; chart logic lives in
+      <code>lib/chart.php</code> (<code>chart_svg()</code>, pure and unit-testable later for S6).</li>
+  <li>Rank 1 (best) at the top; scaled to the data's min/max with gridlines + axis labels; last point highlighted red;
+      native SVG <code>&lt;title&gt;</code> tooltips per point.</li>
+  <li>Edge cases handled: no history → message; single point → point only (no polyline); flat data → range padded ±1.</li>
+  <li>Bug caught during dev: the y-mapping initially put the worst rank at the top — caught by reading the test output
+      (position 1 must be top), fixed the formula, re-verified.</li>
+</ul>
+
 <h2>Prompts &amp; fixes</h2>
 <p>Four real prompts that mattered — including two that failed — and concrete AI
 mistakes, how they were caught, and the fix.</p>
@@ -294,7 +307,7 @@ change — a hidden server-side success is not a visible result.</p>
 
 <h2>Retrospective</h2>
 <p class="stub">What we'd do differently + total hours, updated each milestone.</p>
-<p>Hours spent so far: <strong>~5h</strong> (0.5h planning + 1h M1 + 0.5h M2 + 0.5h M3 + 0.5h M4 + 0.5h M5 + refresh fix + 0.5h M6 + 0.5h M7 + 0.5h M8).</p>
+<p>Hours spent so far: <strong>~5.5h</strong> (M1–M8 ~5h + S1 0.5h).</p>
 
 </body>
 </html>

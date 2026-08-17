@@ -58,6 +58,8 @@ final class KeywordDetailController
                     <?= count($history) ?> record(s)
                 </p>
 
+                <?= chart_svg(array_reverse($history)) ?>
+
                 <table class="kw">
                     <thead>
                     <tr>

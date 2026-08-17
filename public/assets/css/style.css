@@ -160,6 +160,47 @@ a.kw-link:hover {
     overflow-x: auto;
 }
 
+.chart {
+    display: block;
+    width: 100%;
+    height: auto;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    margin-bottom: 1rem;
+}
+
+.chart .grid {
+    stroke: #e5e5e5;
+    stroke-width: 1;
+}
+
+.chart .axis {
+    font: 11px system-ui, -apple-system, "Segoe UI", sans-serif;
+    fill: #666;
+    text-anchor: end;
+}
+
+.chart .axis.mid {
+    text-anchor: middle;
+}
+
+.chart .line {
+    fill: none;
+    stroke: #0056b3;
+    stroke-width: 2;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+}
+
+.chart .point {
+    fill: #0056b3;
+}
+
+.chart .point.last {
+    fill: #b00;
+}
+
 @media (max-width: 640px) {
     th.col-added,
     td.col-added {

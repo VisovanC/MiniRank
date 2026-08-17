@@ -50,6 +50,7 @@ days, ranks 1–100). Safe to re-run.
   nosniff + frame-options headers
 - **M7** This README — one-command start + seed
 - **M8** Responsive layout (usable at phone width)
+- **S1** Line chart (hand-rolled SVG) of position history on the keyword detail page
 
 ## Layout
 
