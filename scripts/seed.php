@@ -22,16 +22,11 @@ if (keyword_count($pdo) === 0) {
 }
 
 $days = 30;
-$today = new DateTimeImmutable('today');
 $keywords = keyword_list($pdo);
 $inserted = 0;
 
 foreach ($keywords as $keyword) {
-    $positions = simulate_positions($days, static fn(): float => mt_rand() / mt_getrandmax());
-    for ($i = 0; $i < $days; $i++) {
-        $date = $today->modify('-' . ($days - 1 - $i) . ' days')->format('Y-m-d');
-        $inserted += position_seed($pdo, (int) $keyword['id'], $date, $positions[$i]);
-    }
+    $inserted += seed_keyword_history($pdo, (int) $keyword['id'], $days);
 }
 
 echo sprintf(

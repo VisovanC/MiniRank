@@ -70,7 +70,8 @@ final class KeywordListController
             return 'Phrase must be 255 characters or fewer.';
         }
         try {
-            keyword_create($this->pdo, $phrase);
+            $id = keyword_create($this->pdo, $phrase);
+            seed_keyword_history($this->pdo, $id);
         } catch (PDOException $e) {
             if (str_starts_with((string) $e->getCode(), '23')) {
                 return 'A keyword with that phrase already exists.';

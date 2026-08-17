@@ -242,10 +242,13 @@ controller can dispatch on <code>PATH_INFO</code> — <code>lib/</code> and the 
   <li>Edge cases handled: no history → message; single point → point only (no polyline); flat data → range padded ±1.</li>
   <li>Bug caught during dev: the y-mapping initially put the worst rank at the top — caught by reading the test output
       (position 1 must be top), fixed the formula, re-verified.</li>
+  <li>Bug found by user review (logged in slot 5): a keyword added via the UI had no history and no trend — the first
+      refresh only added today's row. Fixed by extracting <code>seed_keyword_history()</code> into <code>lib/seed.php</code>
+      and backfilling 30 days on create; <code>scripts/seed.php</code> now reuses the same function.</li>
 </ul>
 
 <h2>Prompts &amp; fixes</h2>
-<p>Four real prompts that mattered — including two that failed — and concrete AI
+<p>Five real prompts that mattered — including two that failed — and concrete AI
 mistakes, how they were caught, and the fix.</p>
 <h3>1. The foundation prompt (the most relevant one)</h3>
 <p><em>Prompt:</em> "I'm building a keyword-position-tracker web app for an
@@ -304,10 +307,25 @@ in the JSON; <code>app.js</code> rewrites each row's cells via
 (<code>keyword_rows_with_metrics()</code>) so the table and the endpoint always agree.
 Lesson: when an AJAX action "does nothing", check what the DOM is actually supposed to
 change — a hidden server-side success is not a visible result.</p>
+<h3>5. The S1-followup bug — new keywords had no history</h3>
+<p><em>Prompt:</em> "if i add a keyword other than the ones from the seeded history,
+it has no trend and holds no records except for today."</p>
+<p><em>What went wrong:</em> creating a keyword inserted only the <code>keywords</code>
+row. The seed script backfilled 30 days of history, but UI-created keywords got
+nothing until the first refresh — which added only today's row, leaving no 7-day
+trend and a 1-point chart.</p>
+<p><em>How it was caught:</em> the user added a non-demo keyword and noticed the empty
+trend and a single record; the AI reproduced it (new row had exactly 1 position,
+30 rows only after the seed script ran).</p>
+<p><em>Fix:</em> extracted <code>seed_keyword_history()</code> into <code>lib/seed.php</code>
+(shared by the seed script) and call it on create, so every keyword starts with a
+30-day history immediately. Lesson: keep "seed-like" behavior in one lib function and
+apply it consistently wherever data enters the app — the UI and the seed script must
+treat new keywords the same way.</p>
 
 <h2>Retrospective</h2>
 <p class="stub">What we'd do differently + total hours, updated each milestone.</p>
-<p>Hours spent so far: <strong>~5.5h</strong> (M1–M8 ~5h + S1 0.5h).</p>
+<p>Hours spent so far: <strong>~6h</strong> (M1–M8 ~5h + S1 0.5h + S1 bug fix 0.5h).</p>
 
 </body>
 </html>

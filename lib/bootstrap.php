@@ -11,6 +11,7 @@ require_once __DIR__ . '/positions.php';
 require_once __DIR__ . '/refresh.php';
 require_once __DIR__ . '/trend.php';
 require_once __DIR__ . '/chart.php';
+require_once __DIR__ . '/seed.php';
 require_once __DIR__ . '/escape.php';
 
 header('X-Content-Type-Options: nosniff');
