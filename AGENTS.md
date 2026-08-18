@@ -34,6 +34,5 @@
 - The Dockerfile's composer stage runs PHPUnit during `docker compose up -d --build`, so a broken build never ships.
 
 ## Process notes
-- One opencode session per feature/milestone.
 - Plan mode before Build mode for anything touching schema or architecture.
 - Small, scoped prompts — one milestone or one bug at a time.
