@@ -82,8 +82,7 @@ touched. The suite also runs at image build time (composer stage), so
   2087 assertions)
 - **S7** Docker polish — PHPUnit runs at image build (a broken build won't ship),
   container healthcheck, `restart: unless-stopped`
-- **S8** Final QA — fresh-clone end-to-end proof (clone → build → seed →
-  sign-up → full flow) and a full lint pass
+- **S8** [`AGENTS.md`](AGENTS.md) — hand-written project conventions for an AI agent working in this repo
 
 ## Layout
 
