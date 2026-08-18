@@ -5,3 +5,4 @@ data/
 vendor/
 .env
 .DS_Store
+.phpunit.result.cache

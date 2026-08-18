@@ -43,14 +43,14 @@ keyword in that project (last 30 days, ranks 1–100). Safe to re-run.
 ## Run the tests
 
 ```
-php tests/run.php
+docker compose run --rm test
 ```
 
-Dependency-free runner over the pure `lib/` functions (uses an in-memory SQLite,
-so it touches no real data). Inside Docker: `docker compose exec app php tests/run.php`
-— and the image build itself runs them, so `docker compose up -d --build` fails
-if any test breaks. The container also has a healthcheck against `/login.php`;
-check it with `docker compose ps` (the app column shows "healthy").
+PHPUnit tests for the core `lib/` logic — seeding, trend calculation, chart SVG,
+CSV encoding, escaping, CSRF tokens, users + lockout, DB CRUD and the
+legacy-schema migration — against an in-memory SQLite, so no real data is
+touched. The suite also runs at image build time (composer stage), so
+`docker compose up -d --build` fails if any test breaks.
 
 ## What it does
 
@@ -75,21 +75,28 @@ check it with `docker compose ps` (the app column shows "healthy").
   by rank range (min–max), combined with each other and with search
 - **S5** CSV export — download the current (search- and filter-aware) keyword list
   or a keyword's position history; UTF-8 BOM + proper quoting for Excel
-- **S6** Unit tests for the pure `lib/` functions — dependency-free runner
-  (`php tests/run.php`): trend/filter logic, chart SVG, CSV encoding, escaping,
-  CSRF tokens, user auth + lockout, project/keyword/position CRUD on in-memory
-  SQLite, and the legacy-schema migration
+- **S6** PHPUnit tests for the core logic — seeding and trend calculation, plus
+  chart SVG, CSV encoding, escaping, CSRF tokens, user auth + lockout,
+  project/keyword/position CRUD on in-memory SQLite, and the legacy-schema
+  migration. Composer-managed; `docker compose run --rm test` (60 tests,
+  2087 assertions)
+- **S7** Docker polish — PHPUnit runs at image build (a broken build won't ship),
+  container healthcheck, `restart: unless-stopped`
+- **S8** Final QA — fresh-clone end-to-end proof (clone → build → seed →
+  sign-up → full flow) and a full lint pass
 
 ## Layout
 
 ```
 public/       web root — entry files (index.php, keyword.php, refresh.php)
 controllers/  request/response handling (thin, may echo)
-lib/          pure logic — no superglobals, no echo (unit-testable)
+lib/          pure logic — no superglobals, no echo (PHPUnit-tested)
+tests/        PHPUnit suites (composer dev dependency)
 config/       config.php — DB path, site URL
 scripts/      CLI scripts (seed)
-data/         SQLite file (gitignored)
+data/         SQLite file (gitignored, volume-mounted)
 schema.sql    idempotent schema, applied automatically on first run
+composer.json / phpunit.xml   dev-only tooling (runtime is dependency-free)
 ```
 
 See `process.html` for the build process log (plan, prompts & fixes,

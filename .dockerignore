@@ -3,6 +3,8 @@ data/
 *.db
 *.db-wal
 *.db-shm
+vendor/
+.phpunit.result.cache
 docker-compose.yml
 README.md
 process.html

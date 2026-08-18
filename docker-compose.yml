@@ -6,3 +6,9 @@ services:
     volumes:
       - ./data:/app/data
     restart: unless-stopped
+  test:
+    build:
+      context: .
+      target: test
+    profiles: ["test"]
+    command: ["php", "vendor/bin/phpunit"]

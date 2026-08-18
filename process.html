@@ -76,14 +76,15 @@ MiniRank/
 │   ├── users.php               # accounts + lockout
 │   ├── csrf.php                # token generation/validation (pure)
 │   └── escape.php              # e() output escaping
-├── tests/                      # dependency-free unit tests
-│   └── run.php + *_test.php    # php tests/run.php (in-memory SQLite)
+├── tests/                      # PHPUnit suites (dev-only)
+│   └── bootstrap.php + *Test.php    # in-memory SQLite, no real data
 ├── config/
 │   └── config.php              # returns array: db path, site url
 ├── scripts/
 │   └── seed.php                # CLI: php scripts/seed.php
 ├── data/                       # SQLite file (gitignored, volume-mounted)
 ├── schema.sql                  # idempotent CREATE TABLE IF NOT EXISTS
+├── composer.json / composer.lock / phpunit.xml   # dev-only tooling (runtime dependency-free)
 ├── .gitignore / .dockerignore
 ├── README.md
 └── process.html
@@ -360,30 +361,35 @@ controller can dispatch on <code>PATH_INFO</code> — <code>lib/</code> and the 
       regression after the refactor, lint, Docker end-to-end.</li>
 </ul>
 
-<h3>S6 — Unit tests for the pure lib/ layer <span style="font-weight:normal">(done)</span></h3>
+<h3>S6 — PHPUnit tests for the core logic <span style="font-weight:normal">(done)</span></h3>
 <ul>
-  <li>Dependency-free runner (<code>tests/run.php</code>) matching the app's no-framework ethos: <code>ok()</code>/
-      <code>eq()</code> helpers + a <code>memory_pdo()</code> that boots the real schema.sql on an in-memory SQLite;
-      discovers <code>tests/*_test.php</code>, counts assertions, exits non-zero on any failure (so it can gate CI or
-      a pre-commit check).</li>
-  <li>Pure-logic suites: <code>trend_test.php</code> (latest position, 7-day trend, labels, <code>normalize_filters()</code>
-      incl. clamping + range-swap, <code>filter_rows()</code> incl. no-position handling), <code>chart_test.php</code>
-      (SVG output, rank-1-above-rank-100, flat-data padding, empty/single-point), <code>csv_test.php</code> (quoting),
-      <code>escape_test.php</code>, <code>csrf_test.php</code>.</li>
-  <li>DB suites against fresh in-memory schemas: <code>db_test.php</code> (project/keyword/position CRUD + project
-      scoping, LIKE-escape correctness, upsert/idempotent seed, refresh, deterministic <code>simulate_positions()</code>),
-      <code>users_test.php</code> (password verify, lockout after 5 failures, reset), <code>schema_test.php</code>
-      (builds a legacy DB by hand and checks the migration adds <code>project_id</code>/lockout columns + Default
-      project, and is idempotent).</li>
-  <li>80 assertions across 8 files, ~0.3s; two initially-failing assertions were bugs in my test expectations (wrong
-      expected LIKE-escape value, and expecting <code>user_verify()</code> to enforce the lock when that lives in the
-      controller) — the code itself was correct, which is the test suite doing its job.</li>
+  <li>First built a hand-rolled runner (<code>tests/run.php</code> + <code>*_test.php</code>) — functionally solid and
+      fast, but a later check against the brief showed S6 explicitly requires <strong>PHPUnit</strong>. Converted the whole
+      suite to PHPUnit <code>TestCase</code> classes; the hand-rolled runner was removed.</li>
+  <li>Composer-managed dev tooling: <code>composer.json</code> (<code>phpunit/phpunit ^12</code>, dev-only),
+      <code>phpunit.xml</code>, <code>tests/bootstrap.php</code> (loads the lib/ functions + <code>memory_pdo()</code>);
+      <code>composer.lock</code> committed for reproducible installs. The runtime stays dependency-free — <code>vendor/</code>
+      is gitignored and never shipped.</li>
+  <li>Coverage: <code>SeedTest</code> (30-day backfill, idempotency, consecutive dates ending today,
+      <code>simulate_positions()</code> deterministic/clamped, <code>refresh_today()</code>), <code>TrendTest</code>
+      (latest position, 7-day trend improved/declined/stable, window semantics, labels, <code>normalize_filters()</code>,
+      <code>filter_rows()</code>), <code>ChartTest</code>, <code>CsvTest</code>, <code>EscapeTest</code>,
+      <code>CsrfTest</code>, <code>UsersTest</code> (verify + lockout), <code>DbTest</code> (project/keyword/position
+      CRUD, LIKE-escape, upsert), <code>SchemaTest</code> (legacy migration, idempotent).</li>
+  <li>Run anywhere with PHP+composer: <code>composer test</code>; in this repo: <code>docker compose run --rm test</code>.</li>
+  <li>60 tests / 2087 assertions, green. The two assertion failures that appeared during the conversion were bugs in my
+      expected values, not the app code (wrong LIKE-escape literal, and expecting <code>user_verify()</code> to enforce the
+      lock when that lives in the controller) — fixed the tests, which is the suite doing its job.</li>
 </ul>
 
 <h3>S7 — Docker/deployment polish <span style="font-weight:normal">(done)</span></h3>
 <ul>
-  <li>Build-time test gate: <code>RUN php tests/run.php</code> in the Dockerfile — the image only builds if all 80
-      unit tests pass, so <code>docker compose up -d --build</code> fails on a broken build instead of shipping it.</li>
+  <li>Build-time test gate: a composer stage in the Dockerfile runs <code>phpunit</code> (with the committed
+      <code>composer.lock</code>) and the runtime stage copies from it, so <code>docker compose up -d --build</code>
+      fails if any test breaks — verified by the S6 → S7 handover. A <code>test</code> compose service
+      (<code>profiles: ["test"]</code>) runs the suite on demand via <code>docker compose run --rm test</code> without
+      starting anything on plain <code>up</code>. <code>vendor/</code> is excluded from the image (runtime stays
+      dependency-free).</li>
   <li>Healthcheck against <code>/login.php</code>; container shows <code>healthy</code> in <code>docker compose ps</code>.
       Bug found during dev: busybox <code>wget localhost</code> resolves to <code>::1</code> first and the server listens
       on IPv4 only → connection refused; fixed by healthchecking <code>127.0.0.1</code> explicitly.</li>
@@ -393,6 +399,23 @@ controller can dispatch on <code>PATH_INFO</code> — <code>lib/</code> and the 
       this file updated to match the current codebase.</li>
   <li>Verified: fresh build passes the test gate, container reaches <code>healthy</code>, host can reach the app, and
       the running DB data is untouched.</li>
+</ul>
+
+<h3>S8 — Final QA and wrap-up <span style="font-weight:normal">(done)</span></h3>
+<ul>
+  <li>Fresh-clone proof, the acid test for the deliverable: cloned the repo into a clean directory (no <code>data/</code>),
+      built with <code>docker compose up -d --build</code> (S6 test gate ran in the build), and exercised the whole app
+      on a separate container/port — first request auto-creates the schema, <code>/login.php</code> redirects to
+      sign-up while there are no users (bootstrap behaviour), seed adds 8 keywords / 240 rows, then register →
+      sign in → list renders 8 keywords → trend filter → CSV export (headers + rows) → AJAX refresh (8 upserts) →
+      detail page, all verified. Test container + clone removed afterwards.</li>
+  <li>Full lint pass: 39 PHP files, no syntax errors. PHPUnit suite green locally and in-container
+      (<code>docker compose run --rm test</code>: 60 tests / 2087 assertions).</li>
+  <li>Robustness find during QA: the healthcheck briefly reported <code>unhealthy</code> while the single-threaded
+      <code>php -S</code> server was busy with a burst of test requests (5s timeout too tight). Widened to
+      <code>60s/10s</code> — stays healthy under normal use.</li>
+  <li>All stretch goals S1–S8 complete: chart, multi-project, accounts + CSRF + hardening, filters, CSV export,
+      unit tests, Docker polish, final QA.</li>
 </ul>
 
 <h2>Prompts &amp; fixes</h2>
@@ -441,8 +464,8 @@ treat new keywords the same way.</p>
 
 <h2>Retrospective</h2>
 <p class="stub">What we'd do differently + total hours, updated each milestone.</p>
-<p>Hours spent so far: <strong>~16h</strong> (M1–M8 ~5h + S1 0.5h + S1 bug fix 0.5h + S2 2h + S3 2.5h + S4 1h + S5 1.5h + S6 1.5h + S7 1.5h).</p>
-<p>https://opncd.ai/share/QOOYpC73</p>
+<p>Hours spent so far: <strong>~17h</strong> (M1–M8 ~5h + S1 0.5h + S1 bug fix 0.5h + S2 2h + S3 2.5h + S4 1h + S5 1.5h + S6 1.5h + S7 1.5h + S8 1h).</p>
+<p>LLM chat: https://opncd.ai/share/QOOYpC73</p>
 
 </body>
 </html>

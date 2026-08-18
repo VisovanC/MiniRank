@@ -1,0 +1,17 @@
+{
+    "name": "visovanc/minirank",
+    "description": "Keyword position tracker - plain PHP, PDO + SQLite",
+    "type": "project",
+    "require": {
+        "php": ">=8.1"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^12.0"
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "scripts": {
+        "test": "phpunit"
+    }
+}
