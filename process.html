@@ -400,35 +400,80 @@ controller can dispatch on <code>PATH_INFO</code> — <code>lib/</code> and the 
   <li>Verified: fresh build passes the test gate, container reaches <code>healthy</code>, host can reach the app, and
       the running DB data is untouched.</li>
 </ul>
-
-<h3>S8 — Final QA and wrap-up <span style="font-weight:normal">(done)</span></h3>
-<ul>
-  <li>Fresh-clone proof, the acid test for the deliverable: cloned the repo into a clean directory (no <code>data/</code>),
-      built with <code>docker compose up -d --build</code> (S6 test gate ran in the build), and exercised the whole app
-      on a separate container/port — first request auto-creates the schema, <code>/login.php</code> redirects to
-      sign-up while there are no users (bootstrap behaviour), seed adds 8 keywords / 240 rows, then register →
-      sign in → list renders 8 keywords → trend filter → CSV export (headers + rows) → AJAX refresh (8 upserts) →
-      detail page, all verified. Test container + clone removed afterwards.</li>
-  <li>Full lint pass: 39 PHP files, no syntax errors. PHPUnit suite green locally and in-container
-      (<code>docker compose run --rm test</code>: 60 tests / 2087 assertions).</li>
-  <li>Robustness find during QA: the healthcheck briefly reported <code>unhealthy</code> while the single-threaded
-      <code>php -S</code> server was busy with a burst of test requests (5s timeout too tight). Widened to
-      <code>60s/10s</code> — stays healthy under normal use.</li>
-  <li>All stretch goals S1–S8 complete: chart, multi-project, accounts + CSRF + hardening, filters, CSV export,
-      unit tests, Docker polish, final QA.</li>
-</ul>
-
 <h2>Prompts &amp; fixes</h2>
 <p>Three real prompts that mattered — including one that failed — and concrete AI
 mistakes, how they were caught, and the fix.</p>
 <h3>1. The foundation prompt (the most relevant one)</h3>
-<p><em>Prompt:</em> "I'm building a keyword-position-tracker web app for an
-assessment. Stack: plain PHP (no framework), PDO for the DB, SQLite, vanilla
-HTML/CSS/JS, plain AJAX (fetch) for one dynamic refresh action… Do NOT implement
-anything yet… propose ONLY: 1) directory structure separating controllers from a
-lib/ of pure functions, 2) the SQLite schema, 3) the routing approach, 4) where
-CSRF/auth hooks slot in later… also create a process.html kept in three sections
-(Plan / Prompts &amp; fixes / Retrospective)."</p>
+<p><em>Prompt:</em> "I'm building a keyword-position-tracker web app for an assessment. 
+
+Stack: plain PHP (no framework), PDO for the DB, SQLite, vanilla HTML/CSS/JS 
+
+
+for the frontend, plain AJAX (fetch) for one dynamic refresh action. 
+
+
+ 
+
+
+Below is the full requirements list for context — do NOT implement anything 
+
+
+yet. I want to build these one at a time, in separate prompts, once we agree 
+
+
+on the shared foundation. 
+
+
+ 
+
+
+Must-haves (M1-M8): 
+
+
+| M1 | **Keywords CRUD:** add/edit/delete the keywords (search phrases) tracked for one configured website. Single-user app — **no login**. | 
+
+
+| M2 | **Seeded history:** a seed script creates demo keywords with ~30 days of daily positions (1–100). | 
+
+
+| M3 | **Refresh simulation:** a "Refresh positions" button generates today's positions server-side and updates the page **via AJAX, without a full page reload**. | 
+
+
+| M4 | **Keyword list:** every keyword with its current position, a 7-day trend indicator (improved / declined / stable), and a text search. | 
+
+
+| M5 | **Keyword detail:** a page per keyword showing the position history as a table. | 
+
+
+| M6 | **Security basics:** parameterized queries (no SQL built by string concatenation), escaped output, and **no secrets committed to the repository**. | 
+
+
+| M7 | **Runs in 5 minutes:** README with setup steps, a seed command, and a one-command start (`php -S ...` or `docker compose up`). Database: SQLite (recommended — easiest for us to run) or MySQL. | 
+
+
+| M8 | **Responsive:** usable at phone width. Functional beats beautiful — we are not grading pixel-perfection. |
+Later stretch goals I intend to add after M1-M8 work (again, don't build
+these yet, just keep them in mind while designing the foundation): multiple 
+projects/websites, user accounts with sessions + CSRF, filtering by 
+position/movement, CSV export, PHPUnit tests on the core logic, Docker 
+setup, a hand-written AGENTS.md. 
+For this session, propose ONLY:
+1. A directory structure that separates plain PHP "controller" files 
+   (handle request/response) from a lib/ folder of pure functions (DB 
+   queries, trend calculation, seeding logic) with no superglobals or 
+   echo inside them — this needs to stay unit-testable later. 
+2. The SQLite schema: tables, columns, types, indices, and how the schema 
+   would extend later for multiple projects (don't add that column yet, 
+   just don't design something that blocks it). 
+3. The routing approach: plain PHP files as endpoints vs. a tiny hand-rolled 
+   dispatcher — pick one and explain why for an app this size. 
+4. Where CSRF/auth hooks would slot in later without a rewrite. 
+While this is going on, i also need a process.html file in which the process is kept, separated in three sections:
+ - **Plan** — your plan and key decisions, and what you would change in hindsight;     
+- **Prompts & fixes** — 3 real prompts that mattered, **including one that failed**, and concrete mistakes the AI made and how you caught them;    
+ - **Retrospective** — what you would do differently, plus roughly how many hours you spent. i will also write to this and will be kept updated as we work through the project. After every M requirement or major change i will need to update the github repository, so everything is explicit and easy to follow through and understand.
+Don't write any code yet. Just the plan, and flag anything ambiguous you'd 
+want me to decide before we start building M1."</p>
 <p><em>Why it mattered:</em> this single prompt forced a plan-first session and set
 every architectural decision before the first line of code — the controller/lib
 split (testable core), the schema's <code>UNIQUE(keyword_id, date)</code> upsert
@@ -464,6 +509,7 @@ treat new keywords the same way.</p>
 
 <h2>Retrospective</h2>
 <p class="stub">What we'd do differently + total hours, updated each milestone.</p>
+<p>With more time on hand or for a bigger project, I would probably go for a bigger framework, rather than plain PHP and vanilla HTML. I also did the whole build in one session against the advice solely because I did not consider that the model needed too much callback to suffer from context degradation. Even so, on a larger project, or with a smaller-context model, I'd follow the guide's advice and split by feature rather than count on it working out again. </p>
 <p>Hours spent so far: <strong>~17h</strong> (M1–M8 ~5h + S1 0.5h + S1 bug fix 0.5h + S2 2h + S3 2.5h + S4 1h + S5 1.5h + S6 1.5h + S7 1.5h + S8 1h).</p>
 <p>LLM chat: https://opncd.ai/share/QOOYpC73</p>
 
