@@ -23,6 +23,10 @@
 - New JSON/API endpoint → check `current_user_id() === null` inline and return 401 JSON; don't call `require_auth()` (it redirects, wrong for JSON).
 - Every POST is CSRF-checked globally in `bootstrap.php` — forms need `<?= csrf_field() ?>`; JS fetches need the `csrf-token` meta tag value in the body.
 
+## Known gotchas
+- After any code change, rebuild with `docker compose up -d --build`. Plain `up` reuses the cached image and serves stale code — this once hid an entire frontend change (button + JS never loaded) with no error, just missing markup.
+- New keyword creation must call `seed_keyword_history()` (`lib/seed.php`) — the same function the seed script uses. A keyword inserted without it has no 7-day trend and a 1-point chart until the next refresh.
+
 ## Data model
 - `positions` has `UNIQUE(keyword_id, date)`, refresh is an upsert (`ON CONFLICT ... DO UPDATE`), never a plain insert.
 - `keywords.project_id` scopes everything, any keyword query must filter by the active project.
